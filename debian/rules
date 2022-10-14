@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cd debian/build_modules/webidl2 && babeljs-7 -d dist --presets @babel/preset-env --plugins @babel/plugin-transform-runtime lib/
+	dh_auto_build --buildsystem=nodejs
+	cp debian/whatwg-encoding/* whatwg-encoding/lib/
+	cp debian/tr46/* tr46/lib/
+	node ./scripts/webidl/convert.js
+	node ./scripts/generate-js-globals.js
+	cp debian/missing/* lib/jsdom/living/generated/
+	ln -s lib/jsdom/living/generated .

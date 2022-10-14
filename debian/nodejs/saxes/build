@@ -1,0 +1,2 @@
+tsc
+mv build/dist/saxes.* .

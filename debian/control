@@ -1,0 +1,58 @@
+Source: node-jsdom
+Maintainer: Debian Javascript Maintainers <pkg-javascript-devel@lists.alioth.debian.org>
+Uploaders: David Paleino <dapal@debian.org>
+Section: javascript
+Testsuite: autopkgtest-pkg-nodejs
+Priority: optional
+Build-Depends: debhelper-compat (= 13)
+ , dh-sequence-nodejs
+ , chai <!nocheck>
+ , jest <!nocheck>
+ , mocha <!nocheck>
+ , node-abab
+ , node-babel7
+ , node-cssom
+ , node-cssstyle
+ , node-form-data <!nocheck>
+ , node-got
+ , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~) <!nocheck>
+ , node-iconv-lite <!nocheck>
+ , node-lodash-packages
+ , node-recast
+ , node-regenerate
+ , node-rimraf
+ , node-stealthy-require
+ , node-tough-cookie
+ , node-typescript
+ , node-types-node
+ , node-unicode-lastest
+ , node-webidl-conversions
+ , node-ws
+ , ts-node <!nocheck>
+Standards-Version: 4.6.0
+Vcs-Browser: https://salsa.debian.org/js-team/node-jsdom
+Vcs-Git: https://salsa.debian.org/js-team/node-jsdom.git
+Homepage: https://github.com/tmpvar/jsdom
+Rules-Requires-Root: no
+
+Package: node-jsdom
+Architecture: all
+Depends: ${misc:Depends}
+ , node-abab
+ , node-cssom
+ , node-cssstyle
+ , node-form-data
+ , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~)
+ , node-iconv-lite
+ , node-lodash-packages
+ , node-stealthy-require
+ , node-tough-cookie
+ , node-webidl-conversions
+ , node-ws
+ , nodejs
+Provides: ${nodejs:Provides}
+Breaks: node-typescript-types (<< 20201122~)
+Description: javascript implementation of the W3C DOM
+ node-jsdom is a CommonJS implementation of the DOM, intended to be platform
+ independent and as minimal/light as possible, while completely adhering to
+ the w3c DOM specifications.

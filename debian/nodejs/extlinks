@@ -1,0 +1,5 @@
+chai	test
+@types/chai	test
+@types/node
+@types/tough-cookie
+ws	test

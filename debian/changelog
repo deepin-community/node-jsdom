@@ -1,0 +1,212 @@
+node-jsdom (18.1.0+~cs90.11.25-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 18.1.0+~cs90.11.25
+  * Drop fix-unicode-version patch
+
+ -- Yadd <yadd@debian.org>  Sat, 13 Nov 2021 18:25:37 +0100
+
+node-jsdom (18.0.1+~cs89.11.26-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 18.0.1+~cs89.11.26. Updates:
+    + jsdom 18.0.1
+    + @types/parse5 6.0.2
+    + whatwg-url 11.0.0
+
+ -- Yadd <yadd@debian.org>  Fri, 05 Nov 2021 03:10:39 +0100
+
+node-jsdom (18.0.0+~cs88.11.25-4) unstable; urgency=medium
+
+  * Team upload
+  * Fix filenamemangle
+  * Switch to node-unicode-14.0.0
+
+ -- Yadd <yadd@debian.org>  Sat, 30 Oct 2021 23:11:39 +0200
+
+node-jsdom (18.0.0+~cs88.11.25-3) unstable; urgency=medium
+
+  * Team upload
+  * Back to unstable
+
+ -- Yadd <yadd@debian.org>  Sat, 16 Oct 2021 08:33:55 +0200
+
+node-jsdom (18.0.0+~cs88.11.25-2) experimental; urgency=medium
+
+  * Team upload
+  * Add dependency to node-form-data
+
+ -- Yadd <yadd@debian.org>  Fri, 15 Oct 2021 09:54:26 +0200
+
+node-jsdom (18.0.0+~cs88.11.25-1) experimental; urgency=medium
+
+  * Team upload
+  * Fix npm-registry based names
+  * Remove embedded request-promise-native
+  * New upstream version 18.0.0+~cs88.11.25
+  * Update build
+  * Add component tests
+  * Remove useless render-request-optional.patch
+  * Replace workaround-whatwg-encoding-build patch
+  * Dependencies:
+    + remove node-request
+    + add (test):
+      chai, jest, mocha, node-form-data, node-https-proxy-agent, ts-node
+  * Require node-http-proxy-agent
+  * Update lintian overrides
+
+ -- Yadd <yadd@debian.org>  Thu, 14 Oct 2021 19:23:11 +0200
+
+node-jsdom (16.4.0+~cs77.17.35-4) unstable; urgency=medium
+
+  * Team upload
+  * Fix GitHub tags regex
+  * Declare compliance with policy 4.6.0
+  * Add patch to workaround tsc update
+  * Update lintian overrides
+
+ -- Yadd <yadd@debian.org>  Tue, 14 Sep 2021 18:00:17 +0200
+
+node-jsdom (16.4.0+~cs77.17.35-3) unstable; urgency=medium
+
+  * Team upload
+  * Add ctype=nodejs to component(s)
+  * Render node-request optional (Closes: #958697)
+  * Update build dependencies: replace node-typescript-types by
+    node-types-node (Closes: #979810)
+
+ -- Xavier Guimard <yadd@debian.org>  Wed, 13 Jan 2021 08:46:06 +0100
+
+node-jsdom (16.4.0+~cs77.17.35-2) unstable; urgency=medium
+
+  * Team upload
+  * Fix .npmignore file
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 26 Nov 2020 13:32:49 +0100
+
+node-jsdom (16.4.0+~cs77.17.35-1) unstable; urgency=medium
+
+  * Team upload
+  * Embed @types/jsdom and repack
+  * Add break against node-typescript-types <20201122~
+  * Fix build according to recent @types/* changes
+
+ -- Xavier Guimard <yadd@debian.org>  Sun, 22 Nov 2020 09:50:43 +0100
+
+node-jsdom (16.4.0+~cs61.15.30-2) unstable; urgency=medium
+
+  * Team upload
+  * Fix copyright (Closes: #733676, really closed by 16.2.2)
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 19 Nov 2020 12:59:06 +0100
+
+node-jsdom (16.4.0+~cs61.15.30-1) unstable; urgency=medium
+
+  * Team upload
+
+  [ Julien Puydt ]
+  * Bump std-vers to 4.5.1.
+  * Ship parse5's TypeScript definitions (Closes: #968968).
+
+  [ Xavier Guimard ]
+  * Bump debhelper compatibility level to 13
+  * Use dh-sequence-nodejs
+  * Embed @types/parse5 as component and repack
+
+ -- Xavier Guimard <yadd@debian.org>  Wed, 18 Nov 2020 22:32:36 +0100
+
+node-jsdom (16.4.0+~cs56.14.27-1) unstable; urgency=medium
+
+  * Team upload
+
+  [ Debian Janitor ]
+  * Use correct machine-readable copyright file URI.
+  * Set field Upstream-Name in debian/copyright.
+
+  [ Xavier Guimard ]
+  * New upstream version 16.4.0+~cs56.14.27
+    really: 16.4.0+~1.0.0+~2.0.0+~10.2.1+~2.0.1+~2.0.1+~1.0.0+~2.2.0+~6.0.1+~
+            1.0.9+~5.0.1+~2.0.2+~3.2.4+~1.0.2+~2.0.0+~1.0.5+~2.3.0+~8.3.0+~
+            3.0.0+~2.2.0
+  * Embed files downloaded during build (JSON data)
+  * Update build
+  * Update lintian overrides
+
+ -- Xavier Guimard <yadd@debian.org>  Mon, 05 Oct 2020 14:15:42 +0200
+
+node-jsdom (16.2.2+~cs56.12.24-1) unstable; urgency=medium
+
+  * Team upload
+  * Replace old get-orig-source target by File-Excluded field
+  * Add upstream/metadata
+  * Add minimal test based on pkg-js-tools
+  * Bump debhelper compatibility level to 12
+  * Add "Rules-Requires-Root: no"
+  * Change section to javascript
+  * Change priority to optional
+  * Declare compliance with policy 4.5.0
+  * Use pkg-js-tools auto install
+  * New upstream version 16.2.2+dfsg (Closes: #842023)
+  * Fix metadata
+  * Embed components: browser-process-hrtime, data-urls, decimaljs,
+    domexception, html-encoding-sniffer, is-potential-custom-element-name,
+    nwsapi, parse5, request-promise-native, saxes, symbol-tree, tr46,
+    w3c-hr-time, w3c-xmlserializer, whatwg-encoding, whatwg-mimetype,
+    whatwg-url, xml-name-validator, xmlchars (Closes: #743151)
+  * Embed waka, webidl2 and webidl2 for build only
+  * Add lintian overrides
+  * Update build
+  * Update dependencies
+  * Update copyright
+  * Update VCS fields to salsa
+
+ -- Xavier Guimard <yadd@debian.org>  Fri, 10 Jul 2020 15:05:26 +0200
+
+node-jsdom (0.8.10+dfsg1-2) unstable; urgency=medium
+
+  * Team upload.
+  * Enable autopkgtest
+
+  [ W. Martin Borgert ]
+  * Corrected/added dependencies. See #742347 (node-cssstyle) and #743151
+    (node-htmlparser2, node-nwmatcher).
+
+  [ Dmitry Smirnov ]
+  * add gbp.conf
+
+ -- Pirate Praveen <praveen@debian.org>  Tue, 25 Oct 2016 12:01:33 +0530
+
+node-jsdom (0.8.10+dfsg1-1) unstable; urgency=low
+
+  * Team upload.
+  * New upstream release.
+  * Bump Standards to 3.9.5.
+  * Updated VCS links to canonical form.
+  * Removed obsolete "override_dh_fixperms".
+  * "debian/watch" to check Github for releases.
+  * Updated "00-dont_require_package-json.patch".
+  * Minor get-orig-source DFSG-repackaging corrections.
+
+  [ David Paleino ]
+  * Update debian/copyright
+  * Bump dependency on node-contextify (>= 0.1)
+
+ -- Dmitry Smirnov <onlyjob@debian.org>  Tue, 31 Dec 2013 08:57:57 +1100
+
+node-jsdom (0.2.10+dfsg1-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- David Paleino <dapal@debian.org>  Sat, 31 Dec 2011 12:06:18 +0100
+
+node-jsdom (0.2.9+dfsg1-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- David Paleino <dapal@debian.org>  Wed, 16 Nov 2011 22:15:34 +0100
+
+node-jsdom (0.2.8+dfsg1-1) unstable; urgency=low
+
+  * Initial release
+
+ -- David Paleino <dapal@debian.org>  Sat, 29 Oct 2011 18:49:00 +0200

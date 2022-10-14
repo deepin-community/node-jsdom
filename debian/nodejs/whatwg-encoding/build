@@ -1,0 +1,2 @@
+mkdir -p lib
+cp ../debian/nodejs/whatwg-encoding/missing/* lib/

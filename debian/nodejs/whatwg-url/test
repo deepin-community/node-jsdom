@@ -1,0 +1,1 @@
+jest --ci test/mdn.js test/file-url-origin.js

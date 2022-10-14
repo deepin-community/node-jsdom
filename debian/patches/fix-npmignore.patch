@@ -1,0 +1,11 @@
+Description: fix strange npmignore
+Author: Xavier Guimard <yadd@debian.org>
+Forwarded: not-needed
+Last-Update: 2020-11-26
+
+--- a/.npmignore
++++ b/.npmignore
+@@ -1,3 +1 @@
+-/*
+-!lib/
+ lib/**/*.webidl

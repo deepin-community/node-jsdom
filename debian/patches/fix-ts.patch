@@ -1,0 +1,15 @@
+Description: workaround typescript update
+Author: Yadd <yadd@debian.org>
+Forwarded: not-needed
+Last-Update: 2021-09-14
+
+--- a/types-jsdom/ts3.3/index.d.ts
++++ b/types-jsdom/ts3.3/index.d.ts
+@@ -303,6 +303,7 @@
+         HTMLDataElement: typeof HTMLDataElement;
+         HTMLDataListElement: typeof HTMLDataListElement;
+         HTMLDetailsElement: typeof HTMLDetailsElement;
++	// @ts-ignore
+         HTMLDialogElement: typeof HTMLDialogElement;
+         HTMLDirectoryElement: typeof HTMLDirectoryElement;
+         HTMLFieldSetElement: typeof HTMLFieldSetElement;

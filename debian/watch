@@ -1,0 +1,136 @@
+version=4
+opts="dversionmangle=auto,repacksuffix=+dfsg" \
+ https://github.com/tmpvar/jsdom/releases \
+  .*/archive/.*/v?(\d[-\d\.]+)\.tar\.(?:gz|bz2|xz) group
+
+# It is not recommended use npmregistry. Please investigate more.
+# Take a look at https://wiki.debian.org/debian/watch/
+opts="searchmode=plain,ctype=nodejs,component=browser-process-hrtime,pgpmode=none,filenamemangle=s/.*/node-browser-process-hrtime.tar.gz/" \
+ https://registry.npmjs.org/browser-process-hrtime https://registry.npmjs.org/browser-process-hrtime/-/browser-process-hrtime-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts=\
+ctype=nodejs,\
+component=data-urls,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-data-urls-$1/ \
+ https://github.com/jsdom/data-urls/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=decimaljs,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-decimal.js-$1/ \
+ https://github.com/MikeMcl/decimal.js/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=domexception,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-domexception-$1/ \
+ https://github.com/jsdom/domexception/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=html-encoding-sniffer,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-html-encoding-sniffer-$1/ \
+ https://github.com/jsdom/html-encoding-sniffer/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=is-potential-custom-element-name,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-is-potential-custom-element-name-$1/ \
+ https://github.com/mathiasbynens/is-potential-custom-element-name/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+# It is not recommended use npmregistry. Please investigate more.
+# Take a look at https://wiki.debian.org/debian/watch/
+opts="searchmode=plain,ctype=nodejs,component=nwsapi,pgpmode=none,filenamemangle=s/.*/node-nwsapi.tar.gz/" \
+ https://registry.npmjs.org/nwsapi https://registry.npmjs.org/nwsapi/-/nwsapi-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts=\
+ctype=nodejs,\
+component=parse5,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-parse5-$1/ \
+ https://github.com/inikulin/parse5/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=saxes,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-saxes-$1/ \
+ https://github.com/lddubeau/saxes/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=tr46,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-tr46-$1/ \
+ https://github.com/jsdom/tr46/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=symbol-tree,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-js-symbol-tree-$1/ \
+ https://github.com/jsdom/js-symbol-tree/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=w3c-hr-time,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-w3c-hr-time-$1/ \
+ https://github.com/jsdom/w3c-hr-time/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=w3c-xmlserializer,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-w3c-xmlserializer-$1/ \
+ https://github.com/jsdom/w3c-xmlserializer/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=whatwg-encoding,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-whatwg-encoding-$1/ \
+ https://github.com/jsdom/whatwg-encoding/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=whatwg-mimetype,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-whatwg-mimetype-$1/ \
+ https://github.com/jsdom/whatwg-mimetype/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=whatwg-url,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-whatwg-url-$1/ \
+ https://github.com/jsdom/whatwg-url/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=xml-name-validator,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-xml-name-validator-$1/ \
+ https://github.com/jsdom/xml-name-validator/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+opts=\
+ctype=nodejs,\
+component=xmlchars,\
+dversionmangle=auto,\
+filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-xmlchars-$1/ \
+ https://github.com/lddubeau/xmlchars/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
+
+# It is not recommended use npmregistry. Please investigate more.
+# Take a look at https://wiki.debian.org/debian/watch/
+opts="searchmode=plain,ctype=nodejs,component=types-parse5,pgpmode=none,filenamemangle=s/.*/node-types-parse5.tar.gz/" \
+ https://registry.npmjs.org/@types/parse5 https://registry.npmjs.org/@types/parse5/-/parse5-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+# It is not recommended use npmregistry. Please investigate more.
+# Take a look at https://wiki.debian.org/debian/watch/
+opts="searchmode=plain,ctype=nodejs,component=types-jsdom,pgpmode=none,filenamemangle=s/.*/node-types-jsdom.tar.gz/" \
+ https://registry.npmjs.org/@types/jsdom https://registry.npmjs.org/@types/jsdom/-/jsdom-([\d\.]+)@ARCHIVE_EXT@ checksum
