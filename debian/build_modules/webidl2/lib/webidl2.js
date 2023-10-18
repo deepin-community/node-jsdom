@@ -1,5 +1,3 @@
-"use strict";
-
 import { Tokeniser } from "./tokeniser.js";
 import { Enum } from "./productions/enum.js";
 import { Includes } from "./productions/includes.js";
@@ -12,11 +10,13 @@ import { Dictionary } from "./productions/dictionary.js";
 import { Namespace } from "./productions/namespace.js";
 import { CallbackInterface } from "./productions/callback-interface.js";
 import { autoParenter } from "./productions/helpers.js";
+import { Eof } from "./productions/token.js";
 
 /**
  * @param {Tokeniser} tokeniser
  * @param {object} options
  * @param {boolean} [options.concrete]
+ * @param {Function[]} [options.productions]
  */
 function parseByTokens(tokeniser, options) {
   const source = tokeniser.source;
@@ -41,7 +41,8 @@ function parseByTokens(tokeniser, options) {
   function interface_(opts) {
     const base = consume("interface");
     if (!base) return;
-    const ret = Mixin.parse(tokeniser, base, opts) ||
+    const ret =
+      Mixin.parse(tokeniser, base, opts) ||
       Interface.parse(tokeniser, base, opts) ||
       error("Interface has no proper body");
     return ret;
@@ -50,21 +51,34 @@ function parseByTokens(tokeniser, options) {
   function partial() {
     const partial = consume("partial");
     if (!partial) return;
-    return Dictionary.parse(tokeniser, { partial }) ||
+    return (
+      Dictionary.parse(tokeniser, { partial }) ||
       interface_({ partial }) ||
       Namespace.parse(tokeniser, { partial }) ||
-      error("Partial doesn't apply to anything");
+      error("Partial doesn't apply to anything")
+    );
   }
 
   function definition() {
-    return callback() ||
+    if (options.productions) {
+      for (const production of options.productions) {
+        const result = production(tokeniser);
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    return (
+      callback() ||
       interface_() ||
       partial() ||
       Dictionary.parse(tokeniser) ||
       Enum.parse(tokeniser) ||
       Typedef.parse(tokeniser) ||
       Includes.parse(tokeniser) ||
-      Namespace.parse(tokeniser);
+      Namespace.parse(tokeniser)
+    );
   }
 
   function definitions() {
@@ -80,7 +94,7 @@ function parseByTokens(tokeniser, options) {
       autoParenter(def).extAttrs = ea;
       defs.push(def);
     }
-    const eof = consume("eof");
+    const eof = Eof.parse(tokeniser);
     if (options.concrete) {
       defs.push(eof);
     }
@@ -96,10 +110,13 @@ function parseByTokens(tokeniser, options) {
  * @param {object} [options]
  * @param {*} [options.sourceName]
  * @param {boolean} [options.concrete]
+ * @param {Function[]} [options.productions]
+ * @return {import("./productions/base.js").Base[]}
  */
 export function parse(str, options = {}) {
   const tokeniser = new Tokeniser(str);
   if (typeof options.sourceName !== "undefined") {
+    // @ts-ignore (See Tokeniser.source in supplement.d.ts)
     tokeniser.source.name = options.sourceName;
   }
   return parseByTokens(tokeniser, options);

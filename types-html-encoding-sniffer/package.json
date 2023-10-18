@@ -1,0 +1,30 @@
+{
+    "name": "@types/html-encoding-sniffer",
+    "version": "3.0.0",
+    "description": "TypeScript definitions for html-encoding-sniffer",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/html-encoding-sniffer",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "ExE Boss",
+            "url": "https://github.com/ExE-Boss",
+            "githubUsername": "ExE-Boss"
+        },
+        {
+            "name": "BendingBender",
+            "url": "https://github.com/BendingBender",
+            "githubUsername": "BendingBender"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/html-encoding-sniffer"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "9eccea371138d4a78f34364bd376f9b16fe206b3af8fec4a156775840a6bcfb9",
+    "typeScriptVersion": "4.1"
+}

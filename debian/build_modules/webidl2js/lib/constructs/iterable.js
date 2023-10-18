@@ -18,34 +18,38 @@ class Iterable {
     return this.idl.idlType.length === 2;
   }
 
+  get isAsync() {
+    return false;
+  }
+
   generateFunction(key, kind) {
     this.interface.addMethod(this.interface.defaultWhence, key, [], `
-      if (!this || !exports.is(this)) {
-        throw new TypeError("Illegal invocation");
+      if (!exports.is(this)) {
+        throw new globalObject.TypeError("'${key}' called on an object that is not a valid instance of ${this.interface.name}.");
       }
-      return exports.createDefaultIterator(this, "${kind}");
+      return exports.createDefaultIterator(globalObject, this, "${kind}");
     `);
   }
 
   generate() {
     const whence = this.interface.defaultWhence;
+    const requires = new utils.RequiresMap(this.ctx);
+
     if (this.isPair) {
       this.generateFunction("keys", "key");
       this.generateFunction("values", "value");
       this.generateFunction("entries", "key+value");
       this.interface.addProperty(whence, Symbol.iterator, `${this.interface.name}.prototype.entries`);
       this.interface.addMethod(whence, "forEach", ["callback"], `
-        if (!this || !exports.is(this)) {
-          throw new TypeError("Illegal invocation");
+        if (!exports.is(this)) {
+          throw new globalObject.TypeError("'forEach' called on an object that is not a valid instance of ${this.interface.name}.");
         }
         if (arguments.length < 1) {
-          throw new TypeError("Failed to execute 'forEach' on '${this.name}': 1 argument required, " +
-                              "but only 0 present.");
+          throw new globalObject.TypeError("Failed to execute 'forEach' on '${this.name}': 1 argument required, but only 0 present.");
         }
-        if (typeof callback !== "function") {
-          throw new TypeError("Failed to execute 'forEach' on '${this.name}': The callback provided " +
-                              "as parameter 1 is not a function.");
-        }
+        callback = ${requires.addRelative("Function")}.convert(globalObject, callback, {
+          context: "Failed to execute 'forEach' on '${this.name}': The callback provided as parameter 1"
+        });
         const thisArg = arguments[1];
         let pairs = Array.from(this[implSymbol]);
         let i = 0;
@@ -57,16 +61,14 @@ class Iterable {
         }
       `);
     } else {
-      this.interface.addProperty(whence, "keys", "Array.prototype.keys");
-      this.interface.addProperty(whence, "values", "Array.prototype[Symbol.iterator]");
-      this.interface.addProperty(whence, "entries", "Array.prototype.entries");
-      this.interface.addProperty(whence, "forEach", "Array.prototype.forEach");
+      this.interface.addProperty(whence, "keys", "globalObject.Array.prototype.keys");
+      this.interface.addProperty(whence, "values", "globalObject.Array.prototype.values");
+      this.interface.addProperty(whence, "entries", "globalObject.Array.prototype.entries");
+      this.interface.addProperty(whence, "forEach", "globalObject.Array.prototype.forEach");
       // @@iterator is added in Interface class.
     }
 
-    return {
-      requires: new utils.RequiresMap(this.ctx)
-    };
+    return { requires };
   }
 }
 

@@ -272,7 +272,7 @@ export declare class Decimal {
   static exp(n: DecimalValue): Decimal;
   static floor(n: DecimalValue): Decimal;
   static hypot(...n: DecimalValue[]): Decimal;
-  static isDecimal(object: any): boolean
+  static isDecimal(object: any): object is Decimal;
   static ln(n: DecimalValue): Decimal;
   static log(n: DecimalValue, base?: DecimalValue): Decimal;
   static log2(n: DecimalValue): Decimal;
@@ -286,7 +286,7 @@ export declare class Decimal {
   static random(significantDigits?: number): Decimal;
   static round(n: DecimalValue): Decimal;
   static set(object: DecimalConfig): DecimalConstructor;
-  static sign(n: DecimalValue): Decimal;
+  static sign(n: DecimalValue): number;
   static sin(n: DecimalValue): Decimal;
   static sinh(n: DecimalValue): Decimal;
   static sqrt(n: DecimalValue): Decimal;

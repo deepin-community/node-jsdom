@@ -1,12 +1,10 @@
-// @ts-check
-
 import { Container } from "./container.js";
 import { Operation } from "./operation.js";
 import { Constant } from "./constant.js";
 
 export class CallbackInterface extends Container {
   /**
-   * @param {import("../tokeniser").Tokeniser} tokeniser
+   * @param {import("../tokeniser.js").Tokeniser} tokeniser
    */
   static parse(tokeniser, callback, { partial = null } = {}) {
     const tokens = { callback };
@@ -14,14 +12,17 @@ export class CallbackInterface extends Container {
     if (!tokens.base) {
       return;
     }
-    return Container.parse(tokeniser, new CallbackInterface({ source: tokeniser.source, tokens }), {
-      type: "callback interface",
-      inheritable: !partial,
-      allowedMembers: [
-        [Constant.parse],
-        [Operation.parse, { regular: true }]
-      ]
-    });
+    return Container.parse(
+      tokeniser,
+      new CallbackInterface({ source: tokeniser.source, tokens }),
+      {
+        inheritable: !partial,
+        allowedMembers: [
+          [Constant.parse],
+          [Operation.parse, { regular: true }],
+        ],
+      }
+    );
   }
 
   get type() {

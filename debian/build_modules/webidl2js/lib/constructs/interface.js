@@ -4,11 +4,11 @@ const utils = require("../utils");
 const Attribute = require("./attribute");
 const Constant = require("./constant");
 const Iterable = require("./iterable");
+const AsyncIterable = require("./async-iterable");
 const Operation = require("./operation");
 const Types = require("../types");
 const Overloads = require("../overloads");
 const Parameters = require("../parameters");
-const keywords = require("../keywords");
 
 function isNamed(idl) {
   return idl.arguments[0].idlType.idlType === "DOMString";
@@ -16,16 +16,6 @@ function isNamed(idl) {
 function isIndexed(idl) {
   return idl.arguments[0].idlType.idlType === "unsigned long";
 }
-
-function formatArgs(args) {
-  return args.map(name => name + (keywords.has(name) ? "_" : "")).join(", ");
-}
-
-const defaultDefinePropertyDescriptor = {
-  configurable: false,
-  enumerable: false,
-  writable: false
-};
 
 const defaultObjectLiteralDescriptor = {
   configurable: true,
@@ -39,37 +29,11 @@ const defaultClassMethodDescriptor = {
   writable: true
 };
 
-// type can be "accessor" or "regular"
-function getPropertyDescriptorModifier(currentDesc, targetDesc, type, value = undefined) {
-  const changes = [];
-  if (value !== undefined) {
-    changes.push(`value: ${value}`);
-  }
-  if (currentDesc.configurable !== targetDesc.configurable) {
-    changes.push(`configurable: ${targetDesc.configurable}`);
-  }
-  if (currentDesc.enumerable !== targetDesc.enumerable) {
-    changes.push(`enumerable: ${targetDesc.enumerable}`);
-  }
-  if (type !== "accessor" && currentDesc.writable !== targetDesc.writable) {
-    changes.push(`writable: ${targetDesc.writable}`);
-  }
-
-  if (changes.length === 0) {
-    return undefined;
-  }
-  return `{ ${changes.join(", ")} }`;
-}
-
 class Interface {
   constructor(ctx, idl, opts) {
     this.ctx = ctx;
     this.idl = idl;
     this.name = idl.name;
-
-    for (const member of this.idl.members) {
-      member.definingInterface = this.name;
-    }
 
     this.str = null;
     this.opts = opts;
@@ -89,10 +53,10 @@ class Interface {
     this.namedSetter = null;
     this.namedDeleter = null;
     this.stringifier = null;
-    this.needsPerGlobalProxyHandler = false;
 
     this.iterable = null;
     this._analyzed = false;
+    this._needsUnforgeablesObject = false;
 
     this._outputMethods = new Map();
     this._outputStaticMethods = new Map();
@@ -104,16 +68,55 @@ class Interface {
     if (global && !global.rhs) {
       throw new Error(`[Global] must take an identifier or an identifier list in interface ${this.name}`);
     }
+
+    const exposed = utils.getExtAttr(this.idl.extAttrs, "Exposed");
+    if (!exposed) {
+      throw new Error(`Interface ${this.name} lacks [Exposed]`);
+    }
+
+    if (!exposed.rhs || (exposed.rhs.type !== "identifier" && exposed.rhs.type !== "identifier-list")) {
+      throw new Error(`[Exposed] must take an identifier or an identifier list in interface ${this.name}`);
+    }
+
+    if (exposed.rhs.type === "identifier") {
+      this.exposed = new Set([exposed.rhs.value]);
+    } else {
+      this.exposed = new Set(exposed.rhs.value.map(token => token.value));
+    }
+
+    const legacyWindowAlias = utils.getExtAttr(this.idl.extAttrs, "LegacyWindowAlias");
+    if (legacyWindowAlias) {
+      if (utils.getExtAttr(this.idl.extAttrs, "LegacyNoInterfaceObject")) {
+        throw new Error(`Interface ${this.name} has [LegacyWindowAlias] and [LegacyNoInterfaceObject]`);
+      }
+
+      if (!this.exposed.has("Window")) {
+        throw new Error(`Interface ${this.name} has [LegacyWindowAlias] without [Exposed=Window]`);
+      }
+
+      if (!legacyWindowAlias.rhs ||
+        (legacyWindowAlias.rhs.type !== "identifier" && legacyWindowAlias.rhs.type !== "identifier-list")) {
+        throw new Error(`[LegacyWindowAlias] must take an identifier or an identifier list in interface ${this.name}`);
+      }
+
+      if (legacyWindowAlias.rhs.type === "identifier") {
+        this.legacyWindowAliases = new Set([legacyWindowAlias.rhs.value]);
+      } else {
+        this.legacyWindowAliases = new Set(legacyWindowAlias.rhs.value.map(token => token.value));
+      }
+    } else {
+      this.legacyWindowAliases = null;
+    }
   }
 
-  // whence is either "instance" or "prototype"
+  // whence is either "instance", "prototype" or "unforgeables"
   // type is either "regular", "get", or "set"
   addMethod(whence, propName, args, body, type = "regular", {
     configurable = true,
     enumerable = typeof propName === "string",
     writable = type === "regular" ? true : undefined
   } = {}) {
-    if (whence !== "instance" && whence !== "prototype") {
+    if (whence !== "instance" && whence !== "prototype" && whence !== "unforgeables") {
       throw new Error(`Internal error: Invalid whence ${whence}`);
     }
     if (type !== "regular") {
@@ -136,6 +139,10 @@ class Interface {
 
     const descriptor = { configurable, enumerable, writable };
     this._outputMethods.set(propName, { whence, type, args, body, descriptor });
+
+    if (whence === "unforgeables" && !this.isGlobal) {
+      this._needsUnforgeablesObject = true;
+    }
   }
 
   // type is either "regular", "get", or "set"
@@ -193,77 +200,59 @@ class Interface {
       if (member.type === "operation") {
         if (member.special === "getter") {
           let msg = `Invalid getter ${member.name ? `"${member.name}" ` : ""}on interface ${this.name}`;
-          if (member.definingInterface !== this.name) {
-            msg += ` (defined in ${member.definingInterface})`;
+          if (member.parent.name !== this.name) {
+            msg += ` (defined in ${member.parent.name})`;
           }
           msg += ": ";
           if (member.arguments.length !== 1) {
-            throw new Error(msg + `1 argument should be present, found ${member.arguments.length}`);
+            throw new Error(`${msg}1 argument should be present, found ${member.arguments.length}`);
           }
           if (isIndexed(member)) {
             if (this.indexedGetter) {
-              throw new Error(msg + "duplicated indexed getter");
+              throw new Error(`${msg}duplicated indexed getter`);
             }
             this.indexedGetter = member;
           } else if (isNamed(member)) {
-            if (this.namedGetter) {
-              throw new Error(msg + "duplicated named getter");
-            }
             this.namedGetter = member;
           } else {
-            throw new Error(msg + "getter is neither indexed nor named");
+            throw new Error(`${msg}getter is neither indexed nor named`);
           }
         }
         if (member.special === "setter") {
           let msg = `Invalid setter ${member.name ? `"${member.name}" ` : ""}on interface ${this.name}`;
-          if (member.definingInterface !== this.name) {
-            msg += ` (defined in ${member.definingInterface})`;
+          if (member.parent.name !== this.name) {
+            msg += ` (defined in ${member.parent.name})`;
           }
           msg += ": ";
 
           if (member.arguments.length !== 2) {
-            throw new Error(msg + `2 arguments should be present, found ${member.arguments.length}`);
+            throw new Error(`${msg}2 arguments should be present, found ${member.arguments.length}`);
           }
           if (isIndexed(member)) {
             if (this.indexedSetter) {
-              throw new Error(msg + "duplicated indexed setter");
+              throw new Error(`${msg}duplicated indexed setter`);
             }
             this.indexedSetter = member;
-            if (utils.hasCEReactions(member)) {
-              this.needsPerGlobalProxyHandler = true;
-            }
           } else if (isNamed(member)) {
-            if (this.namedSetter) {
-              throw new Error(msg + "duplicated named setter");
-            }
             this.namedSetter = member;
-            if (utils.hasCEReactions(member)) {
-              this.needsPerGlobalProxyHandler = true;
-            }
           } else {
-            throw new Error(msg + "setter is neither indexed nor named");
+            throw new Error(`${msg}setter is neither indexed nor named`);
           }
         }
         if (member.special === "deleter") {
           let msg = `Invalid deleter ${member.name ? `"${member.name}" ` : ""}on interface ${this.name}`;
-          if (member.definingInterface !== this.name) {
-            msg += ` (defined in ${member.definingInterface})`;
+          if (member.parent.name !== this.name) {
+            msg += ` (defined in ${member.parent.name})`;
           }
           msg += ": ";
 
           if (member.arguments.length !== 1) {
-            throw new Error(msg + `1 arguments should be present, found ${member.arguments.length}`);
+            throw new Error(`${msg}1 arguments should be present, found ${member.arguments.length}`);
           }
           if (isNamed(member)) {
-            if (this.namedDeleter) {
-              throw new Error(msg + "duplicated named deleter");
-            }
             this.namedDeleter = member;
-            if (utils.hasCEReactions(member)) {
-              this.needsPerGlobalProxyHandler = true;
-            }
           } else {
-            throw new Error(msg + "deleter is not named");
+            throw new Error(`${msg}deleter is not named`);
           }
         }
       }
@@ -296,7 +285,9 @@ class Interface {
           if (this.iterable) {
             throw new Error(`Interface ${this.name} has more than one iterable declaration`);
           }
-          this.iterable = new Iterable(this.ctx, this, member);
+          this.iterable = member.async ?
+            new AsyncIterable(this.ctx, this, member) :
+            new Iterable(this.ctx, this, member);
           break;
         default:
           if (!this.ctx.options.suppressErrors) {
@@ -308,8 +299,8 @@ class Interface {
 
       if (member.special === "stringifier") {
         let msg = `Invalid stringifier ${member.name ? `"${member.name}" ` : ""}on interface ${this.name}`;
-        if (member.definingInterface !== this.name) {
-          msg += ` (defined in ${member.definingInterface})`;
+        if (member.parent.name !== this.name) {
+          msg += ` (defined in ${member.parent.name})`;
         }
         msg += ": ";
         if (member.type === "operation") {
@@ -320,28 +311,28 @@ class Interface {
             member.arguments = [];
           }
           if (member.arguments.length > 0) {
-            throw new Error(msg + "takes more than zero arguments");
+            throw new Error(`${msg}takes more than zero arguments`);
           }
           if (member.idlType.idlType !== "DOMString" || member.idlType.nullable) {
-            throw new Error(msg + "returns something other than a plain DOMString");
+            throw new Error(`${msg}returns something other than a plain DOMString`);
           }
           if (this.stringifier) {
-            throw new Error(msg + "duplicated stringifier");
+            throw new Error(`${msg}duplicated stringifier`);
           }
           const op = new Operation(this.ctx, this, member);
           op.name = "toString";
           this.operations.set("toString", op);
         } else if (member.type === "attribute") {
           if (member.special === "static") {
-            throw new Error(msg + "keyword cannot be placed on static attribute");
+            throw new Error(`${msg}keyword cannot be placed on static attribute`);
           }
-          if (member.idlType.idlType !== "DOMString" && member.idlType.idlType !== "USVString" ||
+          if ((member.idlType.idlType !== "DOMString" && member.idlType.idlType !== "USVString") ||
               member.idlType.nullable) {
-            throw new Error(msg + "attribute can only be of type DOMString or USVString");
+            throw new Error(`${msg}attribute can only be of type DOMString or USVString`);
           }
           // Implemented in Attribute class.
         } else {
-          throw new Error(msg + `keyword placed on incompatible type ${member.type}`);
+          throw new Error(`${msg}keyword placed on incompatible type ${member.type}`);
         }
         this.stringifier = member;
       }
@@ -349,7 +340,7 @@ class Interface {
     for (const member of this.inheritedMembers()) {
       if (this.iterable && member.type === "iterable") {
         throw new Error(`Iterable interface ${this.name} inherits from another iterable interface ` +
-                        `${member.definingInterface}`);
+                        `${member.parent.name}`);
       }
 
       handleSpecialOperations(member);
@@ -358,13 +349,15 @@ class Interface {
     // https://heycam.github.io/webidl/#dfn-reserved-identifier
     const forbiddenMembers = new Set(["constructor", "toString"]);
     if (this.iterable) {
-      if (this.iterable.isValue) {
-        if (!this.supportsIndexedProperties) {
-          throw new Error(`A value iterator cannot be declared on ${this.name} which does not support indexed ` +
-                          "properties");
+      if (!this.iterable.isAsync) {
+        if (this.iterable.isValue) {
+          if (!this.supportsIndexedProperties) {
+            throw new Error(`A value iterator cannot be declared on ${this.name} which does not support indexed ` +
+                            "properties");
+          }
+        } else if (this.iterable.isPair && this.supportsIndexedProperties) {
+          throw new Error(`A pair iterator cannot be declared on ${this.name} which supports indexed properties`);
         }
-      } else if (this.iterable.isPair && this.supportsIndexedProperties) {
-        throw new Error(`A pair iterator cannot be declared on ${this.name} which supports indexed properties`);
       }
       for (const n of ["entries", "forEach", "keys", "values"]) {
         forbiddenMembers.add(n);
@@ -373,8 +366,8 @@ class Interface {
     for (const member of this.allMembers()) {
       if (forbiddenMembers.has(member.name)) {
         let msg = `${member.name} is forbidden in interface ${this.name}`;
-        if (member.definingInterface !== this.name) {
-          msg += ` (defined in ${member.definingInterface})`;
+        if (member.parent.name !== this.name) {
+          msg += ` (defined in ${member.parent.name})`;
         }
         throw new Error(msg);
       }
@@ -405,47 +398,127 @@ class Interface {
     this.included.push(source);
   }
 
-  generateIterator() {
-    if (this.iterable && this.iterable.isPair) {
+  generateInstallIteratorPrototype() {
+    const { iterable } = this;
+    if (!iterable) {
+      return;
+    }
+
+    if (iterable.isAsync) {
+      this.requires.addRaw("newObjectInRealm", "utils.newObjectInRealm");
       this.str += `
-        const IteratorPrototype = Object.create(utils.IteratorPrototype, {
-          next: {
-            value: function next() {
-              const internal = this[utils.iterInternalSymbol];
+        ctorRegistry["${this.name} AsyncIterator"] =
+          Object.create(ctorRegistry["%AsyncIteratorPrototype%"], {
+            [Symbol.toStringTag]: {
+              value: "${this.name} AsyncIterator",
+              configurable: true
+            }
+          });
+        utils.define(ctorRegistry["${this.name} AsyncIterator"], {
+          next() {
+            const internal = this && this[utils.iterInternalSymbol];
+            if (!internal) {
+              return globalObject.Promise.reject(new globalObject.TypeError("next() called on a value that is not a ${this.name} async iterator object"));
+            }
+
+            const nextSteps = () => {
+              if (internal.isFinished) {
+                return globalObject.Promise.resolve(newObjectInRealm(globalObject, { value: undefined, done: true }));
+              }
+
+              const nextPromise = internal.target[implSymbol][utils.asyncIteratorNext](this);
+              return nextPromise.then(
+                next => {
+                  internal.ongoingPromise = null;
+                  if (next === utils.asyncIteratorEOI) {
+                    internal.isFinished = true;
+                    return newObjectInRealm(globalObject, { value: undefined, done: true });
+                  }`;
+      if (iterable.isPair) {
+        this.str += `
+                  return newObjectInRealm(globalObject, utils.iteratorResult(next.map(utils.tryWrapperForImpl), kind));
+        `;
+      } else {
+        this.str += `
+                  return newObjectInRealm(globalObject, { value: utils.tryWrapperForImpl(next), done: false });
+        `;
+      }
+      this.str += `
+                },
+                reason => {
+                  internal.ongoingPromise = null;
+                  internal.isFinished = true;
+                  throw reason;
+                }
+              );
+            };
+
+            internal.ongoingPromise = internal.ongoingPromise ?
+              internal.ongoingPromise.then(nextSteps, nextSteps) :
+              nextSteps();
+            return internal.ongoingPromise;
+          },
+      `;
+
+      if (iterable.hasReturnSteps) {
+        this.str += `
+          return(value) {
+            const internal = this && this[utils.iterInternalSymbol];
+            if (!internal) {
+              return globalObject.Promise.reject(new globalObject.TypeError("return() called on a value that is not a ${this.name} async iterator object"));
+            }
+
+            const returnSteps = () => {
+              if (internal.isFinished) {
+                return globalObject.Promise.resolve(newObjectInRealm(globalObject, { value, done: true }));
+              }
+              internal.isFinished = true;
+
+              return internal.target[implSymbol][utils.asyncIteratorReturn](this, value);
+            };
+
+            const returnPromise = internal.ongoingPromise ?
+              internal.ongoingPromise.then(returnSteps, returnSteps) :
+              returnSteps();
+            return returnPromise.then(() => newObjectInRealm(globalObject, { value, done: true }));
+          }
+        `;
+      }
+      this.str += `
+        });
+      `;
+    } else if (iterable.isPair) {
+      this.requires.addRaw("newObjectInRealm", "utils.newObjectInRealm");
+      this.str += `
+        ctorRegistry["${this.name} Iterator"] =
+          Object.create(ctorRegistry["%IteratorPrototype%"], {
+            [Symbol.toStringTag]: {
+              configurable: true,
+              value: "${this.name} Iterator"
+            }
+          });
+        utils.define(
+          ctorRegistry["${this.name} Iterator"],
+          {
+            next() {
+              const internal = this && this[utils.iterInternalSymbol];
+              if (!internal) {
+                throw new globalObject.TypeError("next() called on a value that is not a ${this.name} iterator object");
+              }
+
               const { target, kind, index } = internal;
               const values = Array.from(target[implSymbol]);
               const len = values.length;
               if (index >= len) {
-                return { value: undefined, done: true };
+                return newObjectInRealm(globalObject, { value: undefined, done: true });
               }
 
               const pair = values[index];
               internal.index = index + 1;
-              const [key, value] = pair.map(utils.tryWrapperForImpl);
-
-              let result;
-              switch (kind) {
-                case "key":
-                  result = key;
-                  break;
-                case "value":
-                  result = value;
-                  break;
-                case "key+value":
-                  result = [key, value];
-                  break;
-              }
-              return { value: result, done: false };
-            },
-            writable: true,
-            enumerable: true,
-            configurable: true
-          },
-          [Symbol.toStringTag]: {
-            value: "${this.name} Iterator",
-            configurable: true
+              return newObjectInRealm(globalObject, utils.iteratorResult(pair.map(utils.tryWrapperForImpl), kind));
+            }
           }
-        });
+        );
       `;
     }
   }
@@ -508,31 +581,48 @@ class Interface {
 
   generateExport() {
     this.str += `
-      exports.is = function is(obj) {
-        return utils.isObject(obj) && utils.hasOwn(obj, implSymbol) && obj[implSymbol] instanceof Impl.implementation;
+      exports.is = value => {
+        return utils.isObject(value) && utils.hasOwn(value, implSymbol) && value[implSymbol] instanceof Impl.implementation;
       };
-      exports.isImpl = function isImpl(obj) {
-        return utils.isObject(obj) && obj instanceof Impl.implementation;
+      exports.isImpl = value => {
+        return utils.isObject(value) && value instanceof Impl.implementation;
       };
-      exports.convert = function convert(obj, { context = "The provided value" } = {}) {
-        if (exports.is(obj)) {
-          return utils.implForWrapper(obj);
+      exports.convert = (globalObject, value, { context = "The provided value" } = {}) => {
+        if (exports.is(value)) {
+          return utils.implForWrapper(value);
         }
-        throw new TypeError(\`\${context} is not of type '${this.name}'.\`);
+        throw new globalObject.TypeError(\`\${context} is not of type '${this.name}'.\`);
       };
     `;
 
-    if (this.iterable && this.iterable.isPair) {
-      this.str += `
-        exports.createDefaultIterator = function createDefaultIterator(target, kind) {
-          const iterator = Object.create(IteratorPrototype);
-          Object.defineProperty(iterator, utils.iterInternalSymbol, {
-            value: { target, kind, index: 0 },
-            configurable: true
-          });
-          return iterator;
-        };
-      `;
+    if (this.iterable) {
+      if (this.iterable.isAsync) {
+        this.str += `
+          exports.createDefaultAsyncIterator = (globalObject, target, kind) => {
+            const ctorRegistry = globalObject[ctorRegistrySymbol];
+            const asyncIteratorPrototype = ctorRegistry["${this.name} AsyncIterator"];
+            const iterator = Object.create(asyncIteratorPrototype);
+            Object.defineProperty(iterator, utils.iterInternalSymbol, {
+              value: { target, kind, ongoingPromise: null, isFinished: false },
+              configurable: true
+            });
+            return iterator;
+          };
+        `;
+      } else if (this.iterable.isPair) {
+        this.str += `
+          exports.createDefaultIterator = (globalObject, target, kind) => {
+            const ctorRegistry = globalObject[ctorRegistrySymbol];
+            const iteratorPrototype = ctorRegistry["${this.name} Iterator"];
+            const iterator = Object.create(iteratorPrototype);
+            Object.defineProperty(iterator, utils.iterInternalSymbol, {
+              value: { target, kind, index: 0 },
+              configurable: true
+            });
+            return iterator;
+          };
+        `;
+      }
     }
   }
 
@@ -540,7 +630,7 @@ class Interface {
     const hasIndexedSetter = this.indexedSetter !== null;
     const hasNamedSetter = this.namedSetter !== null;
     const hasNamedDeleter = this.namedDeleter !== null;
-    const overrideBuiltins = Boolean(utils.getExtAttr(this.idl.extAttrs, "OverrideBuiltins"));
+    const overrideBuiltins = Boolean(utils.getExtAttr(this.idl.extAttrs, "LegacyOverrideBuiltins"));
 
     const supportsPropertyIndex = (O, index, indexedValue) => {
       let unsupportedValue = utils.getExtAttr(this.indexedGetter.extAttrs, "WebIDL2JSValueAsUnsupported");
@@ -588,8 +678,13 @@ class Interface {
     const invokeIndexedSetter = (O, P, V) => {
       const arg = this.indexedSetter.arguments[1];
       const conv = Types.generateTypeConversion(
-        this.ctx, "indexedValue", arg.idlType, arg.extAttrs, this.name,
-        `"Failed to set the " + index + " property on '${this.name}': The provided value"`);
+        this.ctx,
+        "indexedValue",
+        arg.idlType,
+        arg.extAttrs,
+        this.name,
+        `"Failed to set the " + index + " property on '${this.name}': The provided value"`
+      );
       this.requires.merge(conv.requires);
 
       const prolog = `
@@ -627,8 +722,13 @@ class Interface {
     const invokeNamedSetter = (O, P, V) => {
       const arg = this.namedSetter.arguments[1];
       const conv = Types.generateTypeConversion(
-        this.ctx, "namedValue", arg.idlType, arg.extAttrs, this.name,
-        `"Failed to set the '" + ${P} + "' property on '${this.name}': The provided value"`);
+        this.ctx,
+        "namedValue",
+        arg.idlType,
+        arg.extAttrs,
+        this.name,
+        `"Failed to set the '" + ${P} + "' property on '${this.name}': The provided value"`
+      );
       this.requires.merge(conv.requires);
 
       const prolog = `
@@ -661,21 +761,13 @@ class Interface {
       return prolog + invocation;
     };
 
-    let sep = "";
-    if (this.needsPerGlobalProxyHandler) {
-      this.str += `
-        const proxyHandlerCache = new WeakMap();
-        class ProxyHandler {
-          constructor(globalObject) {
-            this._globalObject = globalObject;
-          }
-      `;
-    } else {
-      this.str += `
-        const proxyHandler = {
-      `;
-      sep = ",";
-    }
+    this.str += `
+      const proxyHandlerCache = new WeakMap();
+      class ProxyHandler {
+        constructor(globalObject) {
+          this._globalObject = globalObject;
+        }
+    `;
 
     // [[Get]] (necessary because of proxy semantics)
     this.str += `
@@ -699,7 +791,7 @@ class Interface {
             return undefined;
           }
           return Reflect.apply(getter, receiver, []);
-        }${sep}
+        }
     `;
 
     // [[HasProperty]] (necessary because of proxy semantics)
@@ -717,7 +809,7 @@ class Interface {
             return Reflect.has(parent, P);
           }
           return false;
-        }${sep}
+        }
     `;
 
     // [[OwnPropertyKeys]]
@@ -748,7 +840,7 @@ class Interface {
             keys.add(key);
           }
           return [...keys];
-        }${sep}
+        }
     `;
 
     // [[GetOwnProperty]]
@@ -822,7 +914,7 @@ class Interface {
     }
     this.str += `
           return Reflect.getOwnPropertyDescriptor(target, P);
-        }${sep}
+        }
     `;
 
     // [[Set]]
@@ -831,44 +923,30 @@ class Interface {
           if (typeof P === "symbol") {
             return Reflect.set(target, P, V, receiver);
           }
-          if (target === receiver) {
+          // The \`receiver\` argument refers to the Proxy exotic object or an object
+          // that inherits from it, whereas \`target\` refers to the Proxy target:
+          if (target[implSymbol][utils.wrapperSymbol] === receiver) {
     `;
 
-    if (this.needsPerGlobalProxyHandler) {
+    this.str += `
+        const globalObject = this._globalObject;
+    `;
+
+    if (this.supportsIndexedProperties && hasIndexedSetter) {
       this.str += `
-          const globalObject = this._globalObject;
+          if (utils.isArrayIndexPropName(P)) {
+            ${invokeIndexedSetter("target", "P", "V")}
+            return true;
+          }
       `;
     }
-
-    if (this.supportsIndexedProperties) {
-      if (hasIndexedSetter) {
-        this.str += `
-            if (utils.isArrayIndexPropName(P)) {
-              ${invokeIndexedSetter("target", "P", "V")}
-              return true;
-            }
-        `;
-      } else {
-        // Side-effects
-        this.str += `
-            utils.isArrayIndexPropName(P);
-        `;
-      }
-    }
-    if (this.supportsNamedProperties) {
-      if (hasNamedSetter) {
-        this.str += `
-            if (typeof P === "string" && !utils.isArrayIndexPropName(P)) {
-              ${invokeNamedSetter("target", "P", "V")}
-              return true;
-            }
-        `;
-      } else {
-        // Side-effects
-        this.str += `
-            typeof P === "string" && !utils.isArrayIndexPropName(P);
-        `;
-      }
+    if (this.supportsNamedProperties && hasNamedSetter) {
+      this.str += `
+          if (typeof P === "string") {
+            ${invokeNamedSetter("target", "P", "V")}
+            return true;
+          }
+      `;
     }
 
     this.str += `
@@ -936,7 +1014,7 @@ class Interface {
             valueDesc = { writable: true, enumerable: true, configurable: true, value: V };
           }
           return Reflect.defineProperty(receiver, P, valueDesc);
-        }${sep}
+        }
     `;
 
     // [[DefineOwnProperty]]
@@ -947,11 +1025,9 @@ class Interface {
           }
     `;
 
-    if (this.needsPerGlobalProxyHandler) {
-      this.str += `
-          const globalObject = this._globalObject;
-      `;
-    }
+    this.str += `
+        const globalObject = this._globalObject;
+    `;
 
     if (this.supportsIndexedProperties) {
       this.str += `
@@ -979,7 +1055,7 @@ class Interface {
       const unforgeable = new Set();
       for (const m of this.allMembers()) {
         if ((m.type === "attribute" || m.type === "operation") && m.special !== "static" &&
-            utils.getExtAttr(m.extAttrs, "Unforgeable")) {
+            utils.getExtAttr(m.extAttrs, "LegacyUnforgeable")) {
           unforgeable.add(m.name);
         }
       }
@@ -1031,7 +1107,7 @@ class Interface {
       `;
     }
     this.str += `
-        }${sep}
+        }
     `;
 
     // [[Delete]]
@@ -1042,11 +1118,9 @@ class Interface {
           }
     `;
 
-    if (this.needsPerGlobalProxyHandler) {
-      this.str += `
-          const globalObject = this._globalObject;
-      `;
-    }
+    this.str += `
+        const globalObject = this._globalObject;
+    `;
 
     if (this.supportsIndexedProperties) {
       this.str += `
@@ -1093,7 +1167,7 @@ class Interface {
     }
     this.str += `
           return Reflect.deleteProperty(target, P);
-        }${sep}
+        }
     `;
 
     // [[PreventExtensions]]
@@ -1109,31 +1183,69 @@ class Interface {
   }
 
   generateIface() {
+    const { _needsUnforgeablesObject } = this;
+
     this.str += `
-      exports.create = function create(globalObject, constructorArgs, privateData) {
-        if (globalObject[ctorRegistrySymbol] === undefined) {
-          throw new Error('Internal error: invalid global object');
+      function makeWrapper(globalObject, newTarget) {
+        let proto;
+        if (newTarget !== undefined) {
+          proto = newTarget.prototype;
         }
 
-        const ctor = globalObject[ctorRegistrySymbol]["${this.name}"];
-        if (ctor === undefined) {
-          throw new Error('Internal error: constructor ${this.name} is not installed on the passed global object');
+        if (!utils.isObject(proto)) {
+          proto = globalObject[ctorRegistrySymbol]["${this.name}"].prototype;
         }
 
-        let obj = Object.create(ctor.prototype);
-        obj = exports.setup(obj, globalObject, constructorArgs, privateData);
-        return obj;
+        return Object.create(proto);
+      }
+    `;
+
+    let setWrapperToProxy = ``;
+    if (this.isLegacyPlatformObj) {
+      this.str += `
+        function makeProxy(wrapper, globalObject) {
+          let proxyHandler = proxyHandlerCache.get(globalObject);
+          if (proxyHandler === undefined) {
+            proxyHandler = new ProxyHandler(globalObject);
+            proxyHandlerCache.set(globalObject, proxyHandler);
+          }
+          return new Proxy(wrapper, proxyHandler);
+        }
+      `;
+
+      setWrapperToProxy = `
+        wrapper = makeProxy(wrapper, globalObject);`;
+    }
+
+    this.str += `
+      exports.create = (globalObject, constructorArgs, privateData) => {
+        const wrapper = makeWrapper(globalObject);
+        return exports.setup(wrapper, globalObject, constructorArgs, privateData);
       };
-      exports.createImpl = function createImpl(globalObject, constructorArgs, privateData) {
-        const obj = exports.create(globalObject, constructorArgs, privateData);
-        return utils.implForWrapper(obj);
+
+      exports.createImpl = (globalObject, constructorArgs, privateData) => {
+        const wrapper = exports.create(globalObject, constructorArgs, privateData);
+        return utils.implForWrapper(wrapper);
       };
-      exports._internalSetup = function _internalSetup(obj, globalObject) {
+    `;
+
+    if (_needsUnforgeablesObject) {
+      this.generateUnforgeablesObject();
+    }
+
+    this.str += `
+      exports._internalSetup = (wrapper, globalObject) => {
     `;
 
     if (this.idl.inheritance) {
       this.str += `
-        ${this.idl.inheritance}._internalSetup(obj, globalObject);
+        ${this.idl.inheritance}._internalSetup(wrapper, globalObject);
+      `;
+    }
+
+    if (_needsUnforgeablesObject) {
+      this.str += `
+        utils.define(wrapper, getUnforgeables(globalObject));
       `;
     }
 
@@ -1141,42 +1253,40 @@ class Interface {
 
     this.str += `
       };
-      exports.setup = function setup(obj, globalObject, constructorArgs = [], privateData = {}) {
-        privateData.wrapper = obj;
 
-        exports._internalSetup(obj, globalObject);
-        Object.defineProperty(obj, implSymbol, {
+      exports.setup = (wrapper, globalObject, constructorArgs = [], privateData = {}) => {
+        privateData.wrapper = wrapper;
+
+        exports._internalSetup(wrapper, globalObject);
+        Object.defineProperty(wrapper, implSymbol, {
           value: new Impl.implementation(globalObject, constructorArgs, privateData),
           configurable: true
         });
-    `;
+        ${setWrapperToProxy}
 
-    if (this.isLegacyPlatformObj) {
-      if (this.needsPerGlobalProxyHandler) {
-        this.str += `
-        {
-          let proxyHandler = proxyHandlerCache.get(globalObject);
-          if (proxyHandler === undefined) {
-            proxyHandler = new ProxyHandler(globalObject);
-            proxyHandlerCache.set(globalObject, proxyHandler);
-          }
-          obj = new Proxy(obj, proxyHandler);
-        }
-        `;
-      } else {
-        this.str += `
-        obj = new Proxy(obj, proxyHandler);
-        `;
-      }
-    }
-
-    this.str += `
-        obj[implSymbol][utils.wrapperSymbol] = obj;
+        wrapper[implSymbol][utils.wrapperSymbol] = wrapper;
         if (Impl.init) {
-          Impl.init(obj[implSymbol], privateData);
+          Impl.init(wrapper[implSymbol]);
         }
-        return obj;
+        return wrapper;
       };
+
+      exports.new = (globalObject, newTarget) => {
+        ${this.isLegacyPlatformObj ? "let" : "const"} wrapper = makeWrapper(globalObject, newTarget);
+
+        exports._internalSetup(wrapper, globalObject);
+        Object.defineProperty(wrapper, implSymbol, {
+          value: Object.create(Impl.implementation.prototype),
+          configurable: true
+        });
+        ${setWrapperToProxy}
+
+        wrapper[implSymbol][utils.wrapperSymbol] = wrapper;
+        if (Impl.init) {
+          Impl.init(wrapper[implSymbol]);
+        }
+        return wrapper[implSymbol];
+      }
     `;
   }
 
@@ -1196,7 +1306,12 @@ class Interface {
       argNames = minConstructor.nameList;
 
       const conversions = Parameters.generateOverloadConversions(
-        this.ctx, "constructor", this.name, this, `Failed to construct '${this.name}': `);
+        this.ctx,
+        "constructor",
+        this.name,
+        this,
+        `Failed to construct '${this.name}': `
+      );
       this.requires.merge(conversions.requires);
 
       const setupArgs = [
@@ -1207,11 +1322,11 @@ class Interface {
 
       body = `
         ${conversions.body}
-        return exports.setup(${formatArgs(setupArgs)});
+        return exports.setup(${utils.formatArgs(setupArgs)});
       `;
     } else {
       body = `
-        throw new TypeError("Illegal constructor");
+        throw new globalObject.TypeError("Illegal constructor");
       `;
     }
 
@@ -1233,7 +1348,7 @@ class Interface {
     // Don't bother checking "length" attribute as interfaces that support indexed properties must implement one.
     // "Has value iterator" implies "supports indexed properties".
     if (this.supportsIndexedProperties) {
-      this.addProperty(this.defaultWhence, Symbol.iterator, "Array.prototype[Symbol.iterator]");
+      this.addProperty(this.defaultWhence, Symbol.iterator, "globalObject.Array.prototype[Symbol.iterator]");
     }
   }
 
@@ -1277,7 +1392,7 @@ class Interface {
   generateOffInstanceMethods() {
     const addOne = (name, args, body) => {
       this.str += `
-        ${name}(${formatArgs(args)}) {${body}}
+        ${name}(${utils.formatArgs(args)}) {${body}}
       `;
     };
 
@@ -1308,7 +1423,7 @@ class Interface {
           addOne(`static get ${propName}`, [], body[0]);
         }
         if (body[1] !== undefined) {
-          addOne(`static set ${propName}`, args, body[0]);
+          addOne(`static set ${propName}`, args, body[1]);
         }
       }
     }
@@ -1316,14 +1431,6 @@ class Interface {
 
   generateOffInstanceAfterClass() {
     // Inheritance is taken care of by "extends" clause in class declaration.
-    if (utils.getExtAttr(this.idl.extAttrs, "LegacyArrayClass")) {
-      if (this.idl.inheritance) {
-        throw new Error(`Interface ${this.name} has [LegacyArrayClass] but inherits from ${this.idl.inheritance}`);
-      }
-      this.str += `
-        Object.setPrototypeOf(${this.name}.prototype, Array.prototype);
-      `;
-    }
 
     const protoProps = new Map();
     const classProps = new Map();
@@ -1333,7 +1440,7 @@ class Interface {
         continue;
       }
 
-      const descriptorModifier = getPropertyDescriptorModifier(defaultClassMethodDescriptor, descriptor, type);
+      const descriptorModifier = utils.getPropertyDescriptorModifier(defaultClassMethodDescriptor, descriptor, type);
       if (descriptorModifier === undefined) {
         continue;
       }
@@ -1341,7 +1448,7 @@ class Interface {
     }
 
     for (const [name, { type, descriptor }] of this._outputStaticMethods) {
-      const descriptorModifier = getPropertyDescriptorModifier(defaultClassMethodDescriptor, descriptor, type);
+      const descriptorModifier = utils.getPropertyDescriptorModifier(defaultClassMethodDescriptor, descriptor, type);
       if (descriptorModifier === undefined) {
         continue;
       }
@@ -1354,13 +1461,13 @@ class Interface {
       }
 
       const descriptorModifier =
-        getPropertyDescriptorModifier(defaultDefinePropertyDescriptor, descriptor, "regular", body);
+        utils.getPropertyDescriptorModifier(utils.defaultDefinePropertyDescriptor, descriptor, "regular", body);
       protoProps.set(utils.stringifyPropertyKey(name), descriptorModifier);
     }
 
     for (const [name, { body, descriptor }] of this._outputStaticProperties) {
       const descriptorModifier =
-        getPropertyDescriptorModifier(defaultDefinePropertyDescriptor, descriptor, "regular", body);
+        utils.getPropertyDescriptorModifier(utils.defaultDefinePropertyDescriptor, descriptor, "regular", body);
       classProps.set(utils.stringifyPropertyKey(name), descriptorModifier);
     }
 
@@ -1376,17 +1483,18 @@ class Interface {
   }
 
   generateOnInstance() {
+    const { isGlobal } = this;
     const methods = [];
     const props = new Map();
 
     function addOne(name, args, body) {
       methods.push(`
-        ${name}(${formatArgs(args)}) {${body}}
+        ${name}(${utils.formatArgs(args)}) {${body}}
       `);
     }
 
     for (const [name, { whence, type, args, body, descriptor }] of this._outputMethods) {
-      if (whence !== "instance") {
+      if (whence !== "instance" && (whence !== "unforgeables" || !isGlobal)) {
         continue;
       }
 
@@ -1402,7 +1510,7 @@ class Interface {
         }
       }
 
-      const descriptorModifier = getPropertyDescriptorModifier(defaultObjectLiteralDescriptor, descriptor, type);
+      const descriptorModifier = utils.getPropertyDescriptorModifier(defaultObjectLiteralDescriptor, descriptor, type);
       if (descriptorModifier === undefined) {
         continue;
       }
@@ -1417,7 +1525,8 @@ class Interface {
       const propName = utils.stringifyPropertyKey(name);
       methods.push(`${propName}: ${body}`);
 
-      const descriptorModifier = getPropertyDescriptorModifier(defaultObjectLiteralDescriptor, descriptor, "regular");
+      const descriptorModifier =
+        utils.getPropertyDescriptorModifier(defaultObjectLiteralDescriptor, descriptor, "regular");
       if (descriptorModifier === undefined) {
         continue;
       }
@@ -1427,36 +1536,100 @@ class Interface {
     const propStrs = [...props].map(([name, body]) => `${name}: ${body}`);
     if (methods.length > 0) {
       this.str += `
-        Object.defineProperties(
-          obj,
-          Object.getOwnPropertyDescriptors({ ${methods.join(", ")} })
-        );
+        utils.define(wrapper, {
+          ${methods.join(", ")}
+        });
       `;
     }
     if (propStrs.length > 0) {
       this.str += `
         Object.defineProperties(
-          obj,
+          wrapper,
           { ${propStrs.join(", ")} }
         );
       `;
     }
   }
 
+  generateUnforgeablesObject() {
+    const methods = [];
+    const props = new Map();
+
+    function addOne(name, args, body) {
+      methods.push(`
+        ${name}(${utils.formatArgs(args)}) {${body}}
+      `);
+    }
+
+    for (const [name, { whence, type, args, body, descriptor }] of this._outputMethods) {
+      if (whence !== "unforgeables") {
+        continue;
+      }
+
+      const propName = utils.stringifyPropertyKey(name);
+      if (type === "regular") {
+        addOne(propName, args, body);
+      } else {
+        if (body[0] !== undefined) {
+          addOne(`get ${propName}`, [], body[0]);
+        }
+        if (body[1] !== undefined) {
+          addOne(`set ${propName}`, args, body[1]);
+        }
+      }
+
+      const descriptorModifier = utils.getPropertyDescriptorModifier(defaultObjectLiteralDescriptor, descriptor, type);
+      if (descriptorModifier === undefined) {
+        continue;
+      }
+      props.set(utils.stringifyPropertyKey(name), descriptorModifier);
+    }
+
+    this.str += `
+      function getUnforgeables(globalObject) {
+        let unforgeables = unforgeablesMap.get(globalObject);
+        if (unforgeables === undefined) {
+          unforgeables = Object.create(null);
+    `;
+
+    if (methods.length > 0) {
+      this.str += `utils.define(unforgeables, { ${methods.join(", ")} });`;
+    }
+
+    if (props.size > 0) {
+      const propStrs = [...props].map(([name, body]) => `${name}: ${body}`);
+      this.str += `
+          Object.defineProperties(unforgeables, {
+            ${propStrs.join(", ")}
+          });`;
+    }
+
+    this.str += `
+          unforgeablesMap.set(globalObject, unforgeables);
+        }
+        return unforgeables;
+      }
+    `;
+  }
+
   generateInstall() {
     const { idl, name } = this;
 
-    this.str += `
-      exports.install = function install(globalObject) {
-    `;
-
-    if (idl.inheritance) {
+    if (this._needsUnforgeablesObject) {
       this.str += `
-        if (globalObject.${idl.inheritance} === undefined) {
-          throw new Error('Internal error: attempting to evaluate ${name} before ${idl.inheritance}');
-        }
-      `;
+        const unforgeablesMap = new WeakMap();`;
     }
+
+    this.str += `
+      const exposed = new Set(${JSON.stringify([...this.exposed])});
+
+      exports.install = (globalObject, globalNames) => {
+        if (!globalNames.some(globalName => exposed.has(globalName))) {
+          return;
+        }
+
+        const ctorRegistry = utils.initCtorRegistry(globalObject);
+    `;
 
     const ext = idl.inheritance ? ` extends globalObject.${idl.inheritance}` : "";
 
@@ -1464,19 +1637,50 @@ class Interface {
     this.generateOffInstanceMethods();
     this.str += "}";
 
+    const isLegacyNoInterfaceObject = Boolean(utils.getExtAttr(idl.extAttrs, "LegacyNoInterfaceObject"));
+    if (isLegacyNoInterfaceObject) {
+      this.str += `delete ${name}.constructor;`;
+    }
+
     this.generateOffInstanceAfterClass();
 
     this.str += `
-        if (globalObject[ctorRegistrySymbol] === undefined) {
-          globalObject[ctorRegistrySymbol] = Object.create(null);
-        }
-        globalObject[ctorRegistrySymbol][interfaceName] = ${name};
+        ctorRegistry[interfaceName] = ${name};
+    `;
 
+    this.generateInstallIteratorPrototype();
+
+    if (!isLegacyNoInterfaceObject) {
+      this.str += `
         Object.defineProperty(globalObject, interfaceName, {
           configurable: true,
           writable: true,
           value: ${name}
         });
+      `;
+
+      if (this.legacyWindowAliases) {
+        this.str += `
+          if (globalNames.includes("Window")) {
+        `;
+
+        for (const legacyWindowAlias of this.legacyWindowAliases) {
+          this.str += `
+            Object.defineProperty(globalObject, "${legacyWindowAlias}", {
+              configurable: true,
+              writable: true,
+              value: ${name}
+            });
+          `;
+        }
+
+        this.str += `
+          }
+        `;
+      }
+    }
+
+    this.str += `
       };
     `;
   }
@@ -1485,11 +1689,11 @@ class Interface {
     this.str += `
       const interfaceName = "${this.name}";
     `;
-    this.generateIterator();
 
     this.generateExport();
     this.generateIface();
     this.generateInstall();
+
     if (this.isLegacyPlatformObj) {
       this.generateLegacyProxyHandler();
     }

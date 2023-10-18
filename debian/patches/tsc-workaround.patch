@@ -1,0 +1,39 @@
+Description: fix for recent tsc
+Author: Yadd <yadd@debian.org>
+Forwarded: not-needed
+Last-Update: 2022-10-18
+
+--- a/saxes/src/saxes.ts
++++ b/saxes/src/saxes.ts
+@@ -246,6 +246,7 @@
+  *
+  * @param tag The tag.
+  */
++// @ts-ignore
+ export type OpenTagStartHandler<O> = (tag: StartTagForOptions<O>) => void;
+ 
+ export type AttributeEventForOptions<O extends SaxesOptions> =
+@@ -257,6 +258,7 @@
+  * Event handler for attributes.
+  */
+ export type AttributeHandler<O> =
++// @ts-ignore
+   (attribute: AttributeEventForOptions<O>) => void;
+ 
+ /**
+@@ -265,6 +267,7 @@
+  *
+  * @param tag The tag.
+  */
++// @ts-ignore
+ export type OpenTagHandler<O> = (tag: TagForOptions<O>) => void;
+ 
+ /**
+@@ -273,6 +276,7 @@
+  *
+  * @param tag The tag.
+  */
++// @ts-ignore
+ export type CloseTagHandler<O> = (tag: TagForOptions<O>) => void;
+ 
+ /**

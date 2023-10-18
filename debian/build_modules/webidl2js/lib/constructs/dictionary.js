@@ -14,7 +14,7 @@ class Dictionary {
 
   _prepareFields() {
     const fields = [];
-    const members = this.idl.members;
+    const { members } = this.idl;
     members.forEach(member => {
       if (member.type !== "field") {
         throw new Error("webidl2js doesn't support non-field members in dictionaries");
@@ -33,7 +33,13 @@ class Dictionary {
       const typeConversion = field.idlType;
       const argAttrs = field.extAttrs;
       const conv = Types.generateTypeConversion(
-        this.ctx, "value", typeConversion, argAttrs, this.name, `context + " has member ${field.name} that"`);
+        this.ctx,
+        "value",
+        typeConversion,
+        argAttrs,
+        this.name,
+        `context + " has member '${field.name}' that"`
+      );
       this.requires.merge(conv.requires);
 
       str += `
@@ -49,7 +55,7 @@ class Dictionary {
       if (field.required) {
         str += `
           else {
-            throw new TypeError("${field.name} is required in '${this.name}'");
+            throw new globalObject.TypeError("${field.name} is required in '${this.name}'");
           }
         `;
       } else if (field.default) {
@@ -70,12 +76,12 @@ class Dictionary {
 
   generate() {
     this.str += `
-      exports._convertInherit = (obj, ret, { context = "The provided value" } = {}) => {
+      exports._convertInherit = (globalObject, obj, ret, { context = "The provided value" } = {}) => {
     `;
 
     if (this.idl.inheritance) {
       this.str += `
-          ${this.idl.inheritance}._convertInherit(obj, ret, { context });
+          ${this.idl.inheritance}._convertInherit(globalObject, obj, ret, { context });
       `;
     }
 
@@ -83,13 +89,13 @@ class Dictionary {
           ${this._generateConversions()}
         };
 
-        exports.convert = function convert(obj, { context = "The provided value" } = {}) {
+        exports.convert = (globalObject, obj, { context = "The provided value" } = {}) => {
           if (obj !== undefined && typeof obj !== "object" && typeof obj !== "function") {
-            throw new TypeError(\`\${context} is not an object.\`);
+            throw new globalObject.TypeError(\`\${context} is not an object.\`);
           }
 
           const ret = Object.create(null);
-          exports._convertInherit(obj, ret, { context });
+          exports._convertInherit(globalObject, obj, ret, { context });
           return ret;
         };
     `;

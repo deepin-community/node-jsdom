@@ -5,19 +5,30 @@ const conversions = require("webidl-conversions");
 const utils = require("./utils");
 
 const typedArrayTypes = new Set([
-  "Int8Array", "Int16Array", "Int32Array", "Uint8Array", "Uint16Array", "Uint32Array",
-  "Uint8ClampedArray", "Float32Array", "Float64Array"
+  "Int8Array",
+  "Int16Array",
+  "Int32Array",
+  "Uint8Array",
+  "Uint16Array",
+  "Uint32Array",
+  "Uint8ClampedArray",
+  "Float32Array",
+  "Float64Array"
 ]);
 const arrayBufferViewTypes = new Set([...typedArrayTypes, "DataView"]);
 const bufferSourceTypes = new Set([...arrayBufferViewTypes, "ArrayBuffer"]);
 const stringTypes = new Set(["DOMString", "ByteString", "USVString"]);
 const integerTypes = new Set([
-  "byte", "octet", "short", "unsigned short", "long", "unsigned long",
-  "long long", "unsigned long long"
+  "byte",
+  "octet",
+  "short",
+  "unsigned short",
+  "long",
+  "unsigned long",
+  "long long",
+  "unsigned long long"
 ]);
-const numericTypes = new Set([
-  ...integerTypes, "float", "unrestricted float", "double", "unrestricted double"
-]);
+const numericTypes = new Set([...integerTypes, "float", "unrestricted float", "double", "unrestricted double"]);
 
 const resolvedMap = new WeakMap();
 
@@ -26,7 +37,7 @@ function mergeExtAttrs(a = [], b = []) {
 }
 
 // Types of types that generate an output file.
-const resolvedTypes = new Set(["dictionary", "enumeration", "interface"]);
+const resolvedTypes = new Set(["callback", "callback interface", "dictionary", "enumeration", "interface"]);
 
 function resolveType(ctx, idlType, stack = []) {
   if (resolvedMap.has(idlType)) {
@@ -83,7 +94,14 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, errPrefix = '"The provided value"') {
+function generateTypeConversion(
+  ctx,
+  name,
+  idlType,
+  argAttrs = [],
+  parentName = undefined,
+  errPrefix = '"The provided value"'
+) {
   const requires = new utils.RequiresMap(ctx);
   let str = "";
 
@@ -91,11 +109,20 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
   const extAttrs = idlType.extAttrs !== undefined ? [...idlType.extAttrs, ...argAttrs] : argAttrs;
 
   if (idlType.nullable) {
-    str += `
-      if (${name} === null || ${name} === undefined) {
-        ${name} = null;
-      } else {
-    `;
+    const callbackFunction = ctx.callbackFunctions.get(idlType.idlType);
+    if (callbackFunction !== undefined && callbackFunction.legacyTreatNonObjectAsNull) {
+      str += `
+        if (!utils.isObject(${name})) {
+          ${name} = null;
+        } else {
+      `;
+    } else {
+      str += `
+        if (${name} === null || ${name} === undefined) {
+          ${name} = null;
+        } else {
+      `;
+    }
   }
 
   if (idlType.union) {
@@ -115,9 +142,9 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
     generateFrozenArray();
   } else if (conversions[idlType.idlType]) {
     // string or number type compatible with webidl-conversions
-    generateGeneric(`conversions["${idlType.idlType}"]`);
+    generateWebIDLConversions(`conversions["${idlType.idlType}"]`);
   } else if (resolvedTypes.has(ctx.typeOf(idlType.idlType))) {
-    // dictionaries, enumerations, and interfaces
+    // callback functions, callback interfaces, dictionaries, enumerations, and interfaces
     let fn;
     // Avoid requiring the interface itself
     if (idlType.idlType !== parentName) {
@@ -126,14 +153,7 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
     } else {
       fn = `exports.convert`;
     }
-    generateGeneric(fn);
-  } else if (ctx.typeOf(idlType.idlType) === "callback interface") {
-    // We do not save the callback context yet.
-    str += `
-      if (!utils.isObject(${name})) {
-        throw new TypeError(${errPrefix} + " is not an object");
-      }
-    `;
+    generateWebIDL2JS(fn);
   } else {
     // unknown
     // Try to get the impl anyway.
@@ -208,8 +228,27 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
       output.push(`if (${condition}) {}`);
     }
 
-    if (union.callback || union.object) {
-      output.push(`if (typeof ${name} === "function") {}`);
+    if (union.callbackFunction || union.object) {
+      let code = `if (typeof ${name} === "function") {`;
+
+      if (union.callbackFunction) {
+        const conv = generateTypeConversion(
+          ctx,
+          name,
+          union.callbackFunction,
+          [],
+          parentName,
+          `${errPrefix} + " callback function"`
+        );
+        requires.merge(conv.requires);
+        code += conv.body;
+      } else if (union.object) {
+        // noop
+      }
+
+      code += "}";
+
+      output.push(code);
     }
 
     if (union.sequenceLike || union.dictionary || union.record || union.object || union.callbackInterface) {
@@ -217,26 +256,43 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
 
       if (union.sequenceLike) {
         code += `if (${name}[Symbol.iterator] !== undefined) {`;
-        const conv = generateTypeConversion(ctx, name, union.sequenceLike, [], parentName,
-          `${errPrefix} + " sequence"`);
+        const conv = generateTypeConversion(
+          ctx,
+          name,
+          union.sequenceLike,
+          [],
+          parentName,
+          `${errPrefix} + " sequence"`
+        );
         requires.merge(conv.requires);
         code += conv.body;
         code += `} else {`;
       }
 
       if (union.dictionary) {
-        const conv = generateTypeConversion(ctx, name, union.dictionary, [], parentName,
-          `${errPrefix} + " dictionary"`);
+        const conv = generateTypeConversion(
+          ctx,
+          name,
+          union.dictionary,
+          [],
+          parentName,
+          `${errPrefix} + " dictionary"`
+        );
         requires.merge(conv.requires);
         code += conv.body;
       } else if (union.record) {
-        const conv = generateTypeConversion(ctx, name, union.record, [], parentName,
-          `${errPrefix} + " record"`);
+        const conv = generateTypeConversion(ctx, name, union.record, [], parentName, `${errPrefix} + " record"`);
         requires.merge(conv.requires);
         code += conv.body;
       } else if (union.callbackInterface) {
-        const conv = generateTypeConversion(ctx, name, union.callbackInterface, [], parentName,
-          `${errPrefix} + " callback interface"`);
+        const conv = generateTypeConversion(
+          ctx,
+          name,
+          union.callbackInterface,
+          [],
+          parentName,
+          `${errPrefix} + " callback interface"`
+        );
         requires.merge(conv.requires);
         code += conv.body;
       } else if (union.object) {
@@ -276,7 +332,7 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
         code += conv.body;
         requires.merge(conv.requires);
       } else {
-        code += `throw new TypeError(${errPrefix} + " is not of any supported type.")`;
+        code += `throw new globalObject.TypeError(${errPrefix} + " is not of any supported type.")`;
       }
       code += "}";
       output.push(code);
@@ -286,13 +342,19 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
   }
 
   function generateSequence() {
-    const conv = generateTypeConversion(ctx, "nextItem", idlType.idlType[0], [], parentName,
-      `${errPrefix} + "'s element"`);
+    const conv = generateTypeConversion(
+      ctx,
+      "nextItem",
+      idlType.idlType[0],
+      [],
+      parentName,
+      `${errPrefix} + "'s element"`
+    );
     requires.merge(conv.requires);
 
     str += `
       if (!utils.isObject(${name})) {
-        throw new TypeError(${errPrefix} + " is not an iterable object.");
+        throw new globalObject.TypeError(${errPrefix} + " is not an iterable object.");
       } else {
         const V = [];
         const tmp = ${name};
@@ -306,16 +368,28 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
   }
 
   function generateRecord() {
-    const keyConv = generateTypeConversion(ctx, "typedKey", idlType.idlType[0], [], parentName,
-      `${errPrefix} + "'s key"`);
+    const keyConv = generateTypeConversion(
+      ctx,
+      "typedKey",
+      idlType.idlType[0],
+      [],
+      parentName,
+      `${errPrefix} + "'s key"`
+    );
     requires.merge(keyConv.requires);
-    const valConv = generateTypeConversion(ctx, "typedValue", idlType.idlType[1], [], parentName,
-      `${errPrefix} + "'s value"`);
+    const valConv = generateTypeConversion(
+      ctx,
+      "typedValue",
+      idlType.idlType[1],
+      [],
+      parentName,
+      `${errPrefix} + "'s value"`
+    );
     requires.merge(valConv.requires);
 
     str += `
       if (!utils.isObject(${name})) {
-        throw new TypeError(${errPrefix} + " is not an object.");
+        throw new globalObject.TypeError(${errPrefix} + " is not an object.");
       } else {
         const result = Object.create(null);
         for (const key of Reflect.ownKeys(${name})) {
@@ -335,24 +409,7 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
   }
 
   function generatePromise() {
-    let handler;
-    if (idlType.idlType[0].idlType === "void") {
-      // Do nothing.
-      handler = "";
-    } else {
-      const conv = generateTypeConversion(ctx, "value", idlType.idlType[0], [], parentName,
-        `${errPrefix} + " promise value"`);
-      requires.merge(conv.requires);
-      handler = `
-        ${conv.body}
-        return value;
-      `;
-    }
-    str += `
-      ${name} = Promise.resolve(${name}).then(value => {
-        ${handler}
-      }, reason => reason);
-    `;
+    str += `${name} = new globalObject.Promise(resolve => resolve(${name}));`;
   }
 
   function generateFrozenArray() {
@@ -360,19 +417,19 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
     str += `${name} = Object.freeze(${name});`;
   }
 
-  function generateGeneric(conversionFn) {
+  function generateWebIDLConversions(conversionFn) {
     const enforceRange = utils.getExtAttr(extAttrs, "EnforceRange");
     const clamp = utils.getExtAttr(extAttrs, "Clamp");
-    const treatNullAs = utils.getExtAttr(extAttrs, "TreatNullAs");
+    const nullToEmptyString = utils.getExtAttr(extAttrs, "LegacyNullToEmptyString");
 
-    let optString = `context: ${errPrefix},`;
+    let optString = `context: ${errPrefix}, globals: globalObject,`;
     if (clamp) {
       optString += "clamp: true,";
     }
     if (enforceRange) {
       optString += "enforceRange: true,";
     }
-    if (treatNullAs && treatNullAs.rhs.value === "EmptyString") {
+    if (nullToEmptyString) {
       optString += "treatNullAsEmptyString: true,";
     }
     if (idlType.array) {
@@ -384,6 +441,22 @@ function generateTypeConversion(ctx, name, idlType, argAttrs = [], parentName, e
     } else {
       str += `
         ${name} = ${conversionFn}(${name}, { ${optString} });
+      `;
+    }
+  }
+
+  function generateWebIDL2JS(conversionFn) {
+    const optString = `context: ${errPrefix}`;
+
+    if (idlType.array) {
+      str += `
+        for (let i = 0; i < ${name}.length; ++i) {
+          ${name}[i] = ${conversionFn}(globalObject, ${name}[i], { ${optString} });
+        }
+      `;
+    } else {
+      str += `
+        ${name} = ${conversionFn}(globalObject, ${name}, { ${optString} });
       `;
     }
   }
@@ -408,8 +481,7 @@ function extractUnionInfo(ctx, idlType, errPrefix) {
     string: null,
     numeric: null,
     boolean: null,
-    // Callback function, not interface
-    callback: false,
+    callbackFunction: null,
     dictionary: null,
     callbackInterface: null,
     interfaces: new Set(),
@@ -428,7 +500,7 @@ function extractUnionInfo(ctx, idlType, errPrefix) {
       if (seen.object) {
         error("Dictionary-like types are not distinguishable with object type");
       }
-      if (seen.callback) {
+      if (seen.callbackFunction) {
         error("Dictionary-like types are not distinguishable with callback functions");
       }
       if (seen.dictionaryLike) {
@@ -465,7 +537,7 @@ function extractUnionInfo(ctx, idlType, errPrefix) {
       if (seen.interfaceLike) {
         error("Object type is not distinguishable with interface-like types");
       }
-      if (seen.callback) {
+      if (seen.callbackFunction) {
         error("Object type is not distinguishable with callback functions");
       }
       if (seen.dictionaryLike) {
@@ -477,20 +549,19 @@ function extractUnionInfo(ctx, idlType, errPrefix) {
       seen.object = true;
     } else if (item.idlType === "boolean") {
       seen.boolean = item;
-    } else if (item.idlType === "Function") {
-      // TODO: add full support for callback functions
+    } else if (ctx.callbackFunctions.has(item.idlType)) {
       if (seen.object) {
         error("Callback functions are not distinguishable with object type");
       }
       if (seen.dictionaryLike) {
         error("Callback functions are not distinguishable with dictionary-like types");
       }
-      seen.callback = true;
+      seen.callbackFunction = item.idlType;
     } else if (ctx.dictionaries.has(item.idlType)) {
       if (seen.object) {
         error("Dictionary-like types are not distinguishable with object type");
       }
-      if (seen.callback) {
+      if (seen.callbackFunction) {
         error("Dictionary-like types are not distinguishable with callback functions");
       }
       if (seen.dictionaryLike) {
@@ -501,7 +572,7 @@ function extractUnionInfo(ctx, idlType, errPrefix) {
       if (seen.object) {
         error("Dictionary-like types are not distinguishable with object type");
       }
-      if (seen.callback) {
+      if (seen.callbackFunction) {
         error("Dictionary-like types are not distinguishable with callback functions");
       }
       if (seen.dictionaryLike) {
@@ -614,8 +685,8 @@ function areDistinguishable(ctx, type1, type2) {
 
   const effectivelyNullable1 = includesNullableType(ctx, resolved1) || includesDictionaryType(ctx, resolved1);
   const effectivelyNullable2 = includesNullableType(ctx, resolved2) || includesDictionaryType(ctx, resolved2);
-  if (includesNullableType(ctx, resolved1) && effectivelyNullable2 ||
-      effectivelyNullable1 && includesNullableType(ctx, resolved2)) {
+  if ((includesNullableType(ctx, resolved1) && effectivelyNullable2) ||
+      (effectivelyNullable1 && includesNullableType(ctx, resolved2))) {
     return false;
   }
 

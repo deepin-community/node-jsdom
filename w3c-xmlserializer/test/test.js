@@ -152,7 +152,7 @@ describe("Derived from WPT XMLSerializer-serializeToString.html", () => {
       "html:br"
     );
     root.appendChild(element);
-    expect(serialize(root, true)).toEqual(
+    expect(serialize(root, { requireWellFormed: true })).toEqual(
       '<root><child1>value1</child1><html:br xmlns:html="http://www.w3.org/1999/xhtml" /></root>'
     );
   });
@@ -164,6 +164,37 @@ describe("Derived from WPT XMLSerializer-serializeToString.html", () => {
     const document = new DOMParser().parseFromString(markup, "application/xml");
 
     expect(serialize(document)).toEqual(markup);
+  });
+});
+
+describe("Well-formedness test cases", () => {
+  const { DOMParser } = (new JSDOM()).window;
+  const parser = new DOMParser();
+  const document = parser.parseFromString("<dummy />", "text/xml");
+
+  // Derived from https://www.w3.org/TR/xml/#NT-Char
+  test("Check Characters are in range", () => {
+    expect(() => {
+      const emojiNode = document.createTextNode("Emoji 🔍");
+      serialize(emojiNode, { requireWellFormed: true });
+    }).not.toThrow();
+
+    const expectedError = new Error("Failed to serialize XML: text node data is not well-formed.");
+
+    expect(() => {
+      const surrogateBlockNode = document.createTextNode("Surrogate block \uD800");
+      serialize(surrogateBlockNode, { requireWellFormed: true });
+    }).toThrow(expectedError);
+
+    expect(() => {
+      const fffeNode = document.createTextNode("FFFE \uFFFE");
+      serialize(fffeNode, { requireWellFormed: true });
+    }).toThrow(expectedError);
+
+    expect(() => {
+      const ffffNode = document.createTextNode("FFFF \uFFFF");
+      serialize(ffffNode, { requireWellFormed: true });
+    }).toThrow(expectedError);
   });
 });
 

@@ -1,10 +1,8 @@
-"use strict";
-
 import { validationError as error } from "./error.js";
 
 function getMixinMap(all, unique) {
   const map = new Map();
-  const includes = all.filter(def => def.type === "includes");
+  const includes = all.filter((def) => def.type === "includes");
   for (const include of includes) {
     const mixin = unique.get(include.includes);
     if (!mixin) {
@@ -54,7 +52,7 @@ function groupDefinitions(all) {
     mixinMap: getMixinMap(all, unique),
     cache: {
       typedefIncludesDictionary: new WeakMap(),
-      dictionaryIncludesRequiredField: new WeakMap()
+      dictionaryIncludesRequiredField: new WeakMap(),
     },
   };
 }
@@ -62,7 +60,9 @@ function groupDefinitions(all) {
 function* checkDuplicatedNames({ unique, duplicates }) {
   for (const dup of duplicates) {
     const { name } = dup;
-    const message = `The name "${name}" of type "${unique.get(name).type}" was already seen`;
+    const message = `The name "${name}" of type "${
+      unique.get(name).type
+    }" was already seen`;
     yield error(dup.tokens.name, dup, "no-duplicate", message);
   }
 }
@@ -86,7 +86,8 @@ function flatten(array) {
 }
 
 /**
- * @param {*} ast AST or array of ASTs
+ * @param {import("./productions/base.js").Base[]} ast
+ * @return {import("./error.js").WebIDLErrorData[]} validation errors
  */
 export function validate(ast) {
   return [...validateIterable(flatten(ast))];

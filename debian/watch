@@ -1,6 +1,6 @@
 version=4
 opts="dversionmangle=auto,repacksuffix=+dfsg" \
- https://github.com/tmpvar/jsdom/releases \
+ https://github.com/tmpvar/jsdom/tags \
   .*/archive/.*/v?(\d[-\d\.]+)\.tar\.(?:gz|bz2|xz) group
 
 # It is not recommended use npmregistry. Please investigate more.
@@ -47,13 +47,6 @@ filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-is-potential-custom-element-n
 # Take a look at https://wiki.debian.org/debian/watch/
 opts="searchmode=plain,ctype=nodejs,component=nwsapi,pgpmode=none,filenamemangle=s/.*/node-nwsapi.tar.gz/" \
  https://registry.npmjs.org/nwsapi https://registry.npmjs.org/nwsapi/-/nwsapi-([\d\.]+)@ARCHIVE_EXT@ checksum
-
-opts=\
-ctype=nodejs,\
-component=parse5,\
-dversionmangle=auto,\
-filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-parse5-$1/ \
- https://github.com/inikulin/parse5/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
 
 opts=\
 ctype=nodejs,\
@@ -125,12 +118,39 @@ dversionmangle=auto,\
 filenamemangle=s/.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-xmlchars-$1/ \
  https://github.com/lddubeau/xmlchars/tags .*/archive/.*/v?([\d\.]+).tar.gz checksum
 
-# It is not recommended use npmregistry. Please investigate more.
-# Take a look at https://wiki.debian.org/debian/watch/
-opts="searchmode=plain,ctype=nodejs,component=types-parse5,pgpmode=none,filenamemangle=s/.*/node-types-parse5.tar.gz/" \
- https://registry.npmjs.org/@types/parse5 https://registry.npmjs.org/@types/parse5/-/parse5-([\d\.]+)@ARCHIVE_EXT@ checksum
-
-# It is not recommended use npmregistry. Please investigate more.
-# Take a look at https://wiki.debian.org/debian/watch/
+# TYPESCRIPT DECLARATIONS
 opts="searchmode=plain,ctype=nodejs,component=types-jsdom,pgpmode=none,filenamemangle=s/.*/node-types-jsdom.tar.gz/" \
  https://registry.npmjs.org/@types/jsdom https://registry.npmjs.org/@types/jsdom/-/jsdom-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-data-urls,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-data-urls-$1/" \
+ https://registry.npmjs.org/@types/data-urls https://registry.npmjs.org/@types/data-urls/-/data-urls-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-decimal-js,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-decimal-js-$1/" \
+ https://registry.npmjs.org/@types/decimal.js https://registry.npmjs.org/@types/decimal.js/-/decimal.js-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-domexception,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-domexception-$1/" \
+ https://registry.npmjs.org/@types/domexception https://registry.npmjs.org/@types/domexception/-/domexception-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-html-encoding-sniffer,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-html-encoding-sniffer-$1/" \
+ https://registry.npmjs.org/@types/html-encoding-sniffer https://registry.npmjs.org/@types/html-encoding-sniffer/-/html-encoding-sniffer-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-nwsapi,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-nwsapi-$1/" \
+ https://registry.npmjs.org/@types/nwsapi https://registry.npmjs.org/@types/nwsapi/-/nwsapi-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-symbol-tree,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-symbol-tree-$1/" \
+ https://registry.npmjs.org/@types/symbol-tree https://registry.npmjs.org/@types/symbol-tree/-/symbol-tree-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-w3c-hr-time,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-w3c-hr-time-$1/" \
+ https://registry.npmjs.org/@types/w3c-hr-time https://registry.npmjs.org/@types/w3c-hr-time/-/w3c-hr-time-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-w3c-xmlserializer,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-w3c-xmlserializer-$1/" \
+ https://registry.npmjs.org/@types/w3c-xmlserializer https://registry.npmjs.org/@types/w3c-xmlserializer/-/w3c-xmlserializer-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-whatwg-encoding,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-whatwg-encoding-$1/" \
+ https://registry.npmjs.org/@types/whatwg-encoding https://registry.npmjs.org/@types/whatwg-encoding/-/whatwg-encoding-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-whatwg-mimetype,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-whatwg-mimetype-$1/" \
+ https://registry.npmjs.org/@types/whatwg-mimetype https://registry.npmjs.org/@types/whatwg-mimetype/-/whatwg-mimetype-([\d\.]+)@ARCHIVE_EXT@ checksum
+
+opts="searchmode=plain,component=types-whatwg-url,ctype=nodejs,pgpmode=none,filenamemangle=s/^.*?(\d[\d\.-]*@ARCHIVE_EXT@)/node-types-whatwg-url-$1/" \
+ https://registry.npmjs.org/@types/whatwg-url https://registry.npmjs.org/@types/whatwg-url/-/whatwg-url-([\d\.]+)@ARCHIVE_EXT@ checksum

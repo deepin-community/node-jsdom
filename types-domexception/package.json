@@ -1,0 +1,27 @@
+{
+    "name": "@types/domexception",
+    "version": "4.0.0",
+    "description": "TypeScript definitions for domexception",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/domexception",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "ExE Boss",
+            "url": "https://github.com/ExE-Boss",
+            "githubUsername": "ExE-Boss"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/domexception"
+    },
+    "scripts": {},
+    "dependencies": {
+        "@types/webidl-conversions": "*"
+    },
+    "typesPublisherContentHash": "1770bf8fca762442619749e0550c406366be91f84facf54db9c9d3788978f33a",
+    "typeScriptVersion": "3.9"
+}

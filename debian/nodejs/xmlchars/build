@@ -1,2 +1,1 @@
-tsc
-cp -a build/dist/* .
+tsc --outDir .

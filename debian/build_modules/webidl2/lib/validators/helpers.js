@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * @typedef {import("../productions/dictionary.js").Dictionary} Dictionary
  *
@@ -9,7 +7,11 @@
  * @param {boolean} [options.useNullableInner] use when the input idlType is nullable and you want to use its inner type
  * @return {{ reference: *, dictionary: Dictionary }} the type reference that ultimately includes dictionary.
  */
-export function idlTypeIncludesDictionary(idlType, defs, { useNullableInner } = {}) {
+export function idlTypeIncludesDictionary(
+  idlType,
+  defs,
+  { useNullableInner } = {}
+) {
   if (!idlType.union) {
     const def = defs.unique.get(idlType.idlType);
     if (!def) {
@@ -28,14 +30,14 @@ export function idlTypeIncludesDictionary(idlType, defs, { useNullableInner } = 
       if (result) {
         return {
           reference: idlType,
-          dictionary: result.dictionary
+          dictionary: result.dictionary,
         };
       }
     }
     if (def.type === "dictionary" && (useNullableInner || !idlType.nullable)) {
       return {
         reference: idlType,
-        dictionary: def
+        dictionary: def,
       };
     }
   }
@@ -47,7 +49,7 @@ export function idlTypeIncludesDictionary(idlType, defs, { useNullableInner } = 
       }
       return {
         reference: subtype,
-        dictionary: result.dictionary
+        dictionary: result.dictionary,
       };
     }
   }
@@ -62,17 +64,19 @@ export function dictionaryIncludesRequiredField(dict, defs) {
   if (defs.cache.dictionaryIncludesRequiredField.has(dict)) {
     return defs.cache.dictionaryIncludesRequiredField.get(dict);
   }
-  defs.cache.dictionaryIncludesRequiredField.set(dict, undefined); // indeterminate
-  if (dict.inheritance) {
+  // Set cached result to indeterminate to short-circuit circular definitions.
+  // The final result will be updated to true or false.
+  defs.cache.dictionaryIncludesRequiredField.set(dict, undefined);
+  let result = dict.members.some((field) => field.required);
+  if (!result && dict.inheritance) {
     const superdict = defs.unique.get(dict.inheritance);
     if (!superdict) {
-      return true;
-    }
-    if (dictionaryIncludesRequiredField(superdict, defs)) {
-      return true;
+      // Assume required members in the supertype if it is unknown.
+      result = true;
+    } else if (dictionaryIncludesRequiredField(superdict, defs)) {
+      result = true;
     }
   }
-  const result = dict.members.some(field => field.required);
   defs.cache.dictionaryIncludesRequiredField.set(dict, result);
   return result;
 }
