@@ -1,5 +1,6 @@
 "use strict";
 const { extname } = require("path");
+const keywords = require("./keywords.js");
 
 function getDefault(dflt) {
   switch (dflt.type) {
@@ -16,7 +17,7 @@ function getDefault(dflt) {
     case "sequence":
       return "[]";
   }
-  throw new Error("Unexpected default type: " + dflt.type);
+  throw new Error(`Unexpected default type: ${dflt.type}`);
 }
 
 function getExtAttr(attrs, name) {
@@ -38,7 +39,7 @@ function hasCEReactions(idl) {
 }
 
 function isOnInstance(memberIDL, interfaceIDL) {
-  return memberIDL.special !== "static" && (getExtAttr(memberIDL.extAttrs, "Unforgeable") || isGlobal(interfaceIDL));
+  return memberIDL.special !== "static" && isGlobal(interfaceIDL);
 }
 
 function symbolName(symbol) {
@@ -64,6 +65,41 @@ function stringifyPropertyKey(prop) {
 
 function stringifyPropertyName(prop) {
   return typeof prop === "symbol" ? symbolName(prop) : JSON.stringify(propertyName(prop));
+}
+
+// type can be "accessor" or "regular"
+function getPropertyDescriptorModifier(currentDesc, targetDesc, type, value = undefined) {
+  const changes = [];
+  if (value !== undefined) {
+    changes.push(`value: ${value}`);
+  }
+  if (currentDesc.configurable !== targetDesc.configurable) {
+    changes.push(`configurable: ${targetDesc.configurable}`);
+  }
+  if (currentDesc.enumerable !== targetDesc.enumerable) {
+    changes.push(`enumerable: ${targetDesc.enumerable}`);
+  }
+  if (type !== "accessor" && currentDesc.writable !== targetDesc.writable) {
+    changes.push(`writable: ${targetDesc.writable}`);
+  }
+
+  if (changes.length === 0) {
+    return undefined;
+  }
+  return `{ ${changes.join(", ")} }`;
+}
+
+const defaultDefinePropertyDescriptor = {
+  configurable: false,
+  enumerable: false,
+  writable: false
+};
+
+function formatArgs(args) {
+  return args
+    .filter(name => name !== null && name !== undefined && name !== "")
+    .map(name => name + (keywords.has(name) ? "_" : ""))
+    .join(", ");
 }
 
 function toKey(type, func = "") {
@@ -137,5 +173,8 @@ module.exports = {
   isOnInstance,
   stringifyPropertyKey,
   stringifyPropertyName,
+  getPropertyDescriptorModifier,
+  defaultDefinePropertyDescriptor,
+  formatArgs,
   RequiresMap
 };

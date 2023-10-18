@@ -9,6 +9,8 @@ const Context = require("./context");
 const Typedef = require("./constructs/typedef");
 const Interface = require("./constructs/interface");
 const InterfaceMixin = require("./constructs/interface-mixin");
+const CallbackInterface = require("./constructs/callback-interface.js");
+const CallbackFunction = require("./constructs/callback-function");
 const Dictionary = require("./constructs/dictionary");
 const Enumeration = require("./constructs/enumeration");
 
@@ -82,7 +84,15 @@ class Transformer {
     }));
 
     this.ctx.initialize();
-    const { interfaces, interfaceMixins, callbackInterfaces, dictionaries, enumerations, typedefs } = this.ctx;
+    const {
+      interfaces,
+      interfaceMixins,
+      callbackInterfaces,
+      callbackFunctions,
+      dictionaries,
+      enumerations,
+      typedefs
+    } = this.ctx;
 
     // first we're gathering all full interfaces and ignore partial ones
     for (const file of parsed) {
@@ -108,8 +118,12 @@ class Transformer {
             interfaceMixins.set(obj.name, obj);
             break;
           case "callback interface":
-            obj = { name: instruction.name }; // Not fully implemented yet.
+            obj = new CallbackInterface(this.ctx, instruction);
             callbackInterfaces.set(obj.name, obj);
+            break;
+          case "callback":
+            obj = new CallbackFunction(this.ctx, instruction);
+            callbackFunctions.set(obj.name, obj);
             break;
           case "includes":
             break; // handled later
@@ -131,7 +145,7 @@ class Transformer {
             break;
           default:
             if (!this.ctx.options.suppressErrors) {
-              throw new Error("Can't convert type '" + instruction.type + "'");
+              throw new Error(`Can't convert type '${instruction.type}'`);
             }
         }
       }
@@ -140,8 +154,7 @@ class Transformer {
     // second we add all partial members and handle includes
     for (const file of parsed) {
       for (const instruction of file.idl) {
-        let oldMembers;
-        let extAttrs;
+        let oldMembers, extAttrs;
         switch (instruction.type) {
           case "interface":
             if (!instruction.partial) {
@@ -196,7 +209,12 @@ class Transformer {
     const utilsText = await fs.readFile(path.resolve(__dirname, "output/utils.js"));
     await fs.writeFile(this.utilPath, utilsText);
 
-    const { interfaces, dictionaries, enumerations } = this.ctx;
+    const { interfaces, callbackInterfaces, callbackFunctions, dictionaries, enumerations } = this.ctx;
+
+    let relativeUtils = path.relative(outputDir, this.utilPath).replace(/\\/g, "/");
+    if (relativeUtils[0] !== ".") {
+      relativeUtils = `./${relativeUtils}`;
+    }
 
     for (const obj of interfaces.values()) {
       let source = obj.toString();
@@ -204,12 +222,7 @@ class Transformer {
       let implFile = path.relative(outputDir, path.resolve(obj.opts.implDir, obj.name + this.ctx.implSuffix));
       implFile = implFile.replace(/\\/g, "/"); // fix windows file paths
       if (implFile[0] !== ".") {
-        implFile = "./" + implFile;
-      }
-
-      let relativeUtils = path.relative(outputDir, this.utilPath).replace(/\\/g, "/");
-      if (relativeUtils[0] !== ".") {
-        relativeUtils = "./" + relativeUtils;
+        implFile = `./${implFile}`;
       }
 
       source = `
@@ -221,17 +234,11 @@ class Transformer {
         const Impl = require("${implFile}.js");
       `;
 
-
-      await fs.writeFile(path.join(outputDir, obj.name + ".js"), source);
+      await fs.writeFile(path.join(outputDir, `${obj.name}.js`), source);
     }
 
-    for (const obj of dictionaries.values()) {
+    for (const obj of [...callbackInterfaces.values(), ...callbackFunctions.values(), ...dictionaries.values()]) {
       let source = obj.toString();
-
-      let relativeUtils = path.relative(outputDir, this.utilPath).replace(/\\/g, "/");
-      if (relativeUtils[0] !== ".") {
-        relativeUtils = "./" + relativeUtils;
-      }
 
       source = `
         "use strict";
@@ -241,8 +248,7 @@ class Transformer {
         ${source}
       `;
 
-
-      await fs.writeFile(path.join(outputDir, obj.name + ".js"), source);
+      await fs.writeFile(path.join(outputDir, `${obj.name}.js`), source);
     }
 
     for (const obj of enumerations.values()) {
@@ -251,7 +257,7 @@ class Transformer {
 
         ${obj.toString()}
       `;
-      await fs.writeFile(path.join(outputDir, obj.name + ".js"), source);
+      await fs.writeFile(path.join(outputDir, `${obj.name}.js`), source);
     }
   }
 

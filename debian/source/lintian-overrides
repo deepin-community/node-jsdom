@@ -1,68 +1,33 @@
+# Matches types-*/*
+add-component-copyright types-*
+
 # Unused files
-source-is-missing test/jquery-fixtures/jquery-1.6.4.min.js
-source-contains-prebuilt-javascript-object test/jquery-fixtures/jquery-1.6.4.min.js
+source-is-missing *test/jquery-fixtures/jquery-1.6.4.min.js*
+source-contains-prebuilt-javascript-object *test/jquery-fixtures/jquery-1.6.4.min.js*
+very-long-line-length-in-source-file *test/jquery-fixtures/jquery-1.6.4.min.js*
 
 # False positive
-source-is-missing debian/tr46/regexes.js
-source-is-missing decimaljs/decimal.js
-source-is-missing decimaljs/test/modules/intPow.js
-source-is-missing decimaljs/test/modules/ln.js
-source-is-missing decimaljs/test/modules/times.js
-source-is-missing parse5/test/data/location-info/cern/data.html
-source-is-missing parse5/test/data/location-info/dx/data.html
-source-is-missing parse5/test/data/location-info/wiki-42/data.html
-source-is-missing parse5/test/data/sax/lhc/expected.html
-source-is-missing parse5/test/data/sax/lhc/src.html
-source-is-missing test/to-port-to-wpts/level2/core/files/staffNS.xml.js
-source-is-missing tr46/scripts/unicode/Joining_Type.js
-source-is-missing xml-name-validator/lib/xml-name-validator.js
-source-contains-prebuilt-javascript-object debian/tr46/regexes.js
-source-contains-prebuilt-javascript-object decimaljs/decimal.js
-source-contains-prebuilt-javascript-object decimaljs/test/modules/intPow.js
-source-contains-prebuilt-javascript-object decimaljs/test/modules/ln.js
-source-contains-prebuilt-javascript-object decimaljs/test/modules/times.js
-source-contains-prebuilt-javascript-object parse5/test/data/location-info/cern/data.html
-source-contains-prebuilt-javascript-object parse5/test/data/location-info/dx/data.html
-source-contains-prebuilt-javascript-object parse5/test/data/location-info/wiki-42/data.html
-source-contains-prebuilt-javascript-object parse5/test/data/sax/lhc/expected.html
-source-contains-prebuilt-javascript-object parse5/test/data/sax/lhc/src.html
-source-contains-prebuilt-javascript-object test/to-port-to-wpts/level2/core/files/staffNS.xml.js
-source-contains-prebuilt-javascript-object tr46/scripts/unicode/Joining_Type.js
-source-contains-prebuilt-javascript-object xml-name-validator/lib/xml-name-validator.js
-very-long-line-length-in-source-file Changelog.md line 477 is 563 characters long (>512)
-very-long-line-length-in-source-file Contributing.md line 53 is 722 characters long (>512)
-very-long-line-length-in-source-file README.md line 418 is 596 characters long (>512)
-very-long-line-length-in-source-file browser-process-hrtime/LICENSE line 9 is 755 characters long (>512)
-very-long-line-length-in-source-file decimaljs/decimal.js line 29 is 1040 characters long (>512)
-very-long-line-length-in-source-file decimaljs/decimal.mjs line 25 is 1038 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/acos.js line 906 is 539 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/acosh.js line 972 is 550 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/asin.js line 990 is 541 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/asinh.js line 873 is 533 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/atan.js line 873 is 563 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/atan2.js line 923 is 682 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/atanh.js line 868 is 590 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/cbrt.js line 956 is 523 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/intPow.js line 395 is 575 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/ln.js line 57 is 532 characters long (>512)
-very-long-line-length-in-source-file decimaljs/test/modules/times.js line 762 is 519 characters long (>512)
-very-long-line-length-in-source-file nwsapi/README.md line 7 is 609 characters long (>512)
-very-long-line-length-in-source-file parse5/packages/parse5/docs/options/parser-options.md line 19 is 813 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/huge-page/huge-page.html line 7022 is 210088 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/location-info/cern/data.html line 61 is 5056 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/location-info/dx/data.html line 12 is 1089 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/location-info/github-parse5/data.html line 637 is 633 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/location-info/whatwg-html/data.html line 323 is 802 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/location-info/wiki-42/data.html line 22 is 2786 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/parser-feedback/tests1.test line 2146 is 1070 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/parser-feedback/tests11.test line 176 is 993 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/parser-feedback/tests19.test line 2525 is 593 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/sax/lhc/expected.html line 71 is 4815 characters long (>512)
-very-long-line-length-in-source-file parse5/test/data/sax/lhc/src.html line 71 is 4815 characters long (>512)
-very-long-line-length-in-source-file saxes/examples/data/docbook.rng line 11004 is 623 characters long (>512)
-very-long-line-length-in-source-file test/to-port-to-wpts/files/image.txt line 1 is 3510 characters long (>512)
-very-long-line-length-in-source-file test/to-port-to-wpts/level2/core/files/staffNS.xml.js line 10 is 967 characters long (>512)
-very-long-line-length-in-source-file w3c-hr-time/README.md line 36 is 602 characters long (>512)
-very-long-line-length-in-source-file whatwg-url/README.md line 72 is 525 characters long (>512)
-very-long-line-length-in-source-file xmlchars/src/xml/1.0/ed4.ts line 22 is 2270 characters long (>512)
-very-long-line-length-in-source-file xml-name-validator/lib/xml-name-validator.js line 8 is 1191 characters long (>512)
+source-is-missing *debian/tr46/regexes.js*
+source-is-missing *decimaljs/decimal.js*
+source-is-missing *decimaljs/test/*.js*
+source-is-missing *test/to-port-to-wpts/level2/core/files/staffNS.xml.js*
+source-is-missing *tr46/scripts/unicode/Joining_Type.js*
+source-is-missing *xml-name-validator/lib/xml-name-validator.js*
+source-contains-prebuilt-javascript-object *debian/tr46/regexes.js*
+source-contains-prebuilt-javascript-object *decimaljs/decimal.js*
+source-contains-prebuilt-javascript-object *decimaljs/test/*.js*
+source-contains-prebuilt-javascript-object *test/to-port-to-wpts/level2/core/files/staffNS.xml.js*
+source-contains-prebuilt-javascript-object *tr46/scripts/unicode/Joining_Type.js*
+source-contains-prebuilt-javascript-object *xml-name-validator/lib/xml-name-validator.js*
+very-long-line-length-in-source-file *.md*
+very-long-line-length-in-source-file *browser-process-hrtime/LICENSE*
+very-long-line-length-in-source-file *decimaljs/decimal.js*
+very-long-line-length-in-source-file *decimaljs/decimal.mjs*
+very-long-line-length-in-source-file *decimaljs/test/modules/*.js*
+very-long-line-length-in-source-file *saxes/examples/data/docbook.rng*
+very-long-line-length-in-source-file *test/**
+very-long-line-length-in-source-file *xmlchars/src/xml/1.0/ed4.ts*
+very-long-line-length-in-source-file *xml-name-validator/lib/xml-name-validator.js*
+very-long-line-length-in-source-file *debian/tr46/mappingTable.json*
+very-long-line-length-in-source-file *debian/tr46/regexes.js*
+very-long-line-length-in-source-file *tr46/scripts/unicode/Joining_Type.js*

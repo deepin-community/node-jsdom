@@ -1,5 +1,3 @@
-// @ts-check
-
 export class Base {
   /**
    * @param {object} initializer
@@ -9,9 +7,9 @@ export class Base {
   constructor({ source, tokens }) {
     Object.defineProperties(this, {
       source: { value: source },
-      tokens: { value: tokens },
+      tokens: { value: tokens, writable: true },
       parent: { value: null, writable: true },
-      this: { value: this } // useful when escaping from proxy
+      this: { value: this }, // useful when escaping from proxy
     });
   }
 

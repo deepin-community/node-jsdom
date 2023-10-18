@@ -6,13 +6,14 @@ import { unescape } from "./productions/helpers.js";
 const tokenRe = {
   // This expression uses a lookahead assertion to catch false matches
   // against integers early.
-  "decimal": /-?(?=[0-9]*\.|[0-9]+[eE])(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][-+]?[0-9]+)?|[0-9]+[Ee][-+]?[0-9]+)/y,
-  "integer": /-?(0([Xx][0-9A-Fa-f]+|[0-7]*)|[1-9][0-9]*)/y,
-  "identifier": /[_-]?[A-Za-z][0-9A-Z_a-z-]*/y,
-  "string": /"[^"]*"/y,
-  "whitespace": /[\t\n\r ]+/y,
-  "comment": /((\/(\/.*|\*([^*]|\*[^/])*\*\/)[\t\n\r ]*)+)/y,
-  "other": /[^\t\n\r 0-9A-Za-z]/y
+  decimal:
+    /-?(?=[0-9]*\.|[0-9]+[eE])(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][-+]?[0-9]+)?|[0-9]+[Ee][-+]?[0-9]+)/y,
+  integer: /-?(0([Xx][0-9A-Fa-f]+|[0-7]*)|[1-9][0-9]*)/y,
+  identifier: /[_-]?[A-Za-z][0-9A-Z_a-z-]*/y,
+  string: /"[^"]*"/y,
+  whitespace: /[\t\n\r ]+/y,
+  comment: /\/\/.*|\/\*[\s\S]*?\*\//y,
+  other: /[^\t\n\r 0-9A-Za-z]/y,
 };
 
 export const typeNameKeywords = [
@@ -25,18 +26,16 @@ export const typeNameKeywords = [
   "Uint16Array",
   "Uint32Array",
   "Uint8ClampedArray",
+  "BigInt64Array",
+  "BigUint64Array",
   "Float32Array",
   "Float64Array",
   "any",
   "object",
-  "symbol"
+  "symbol",
 ];
 
-export const stringTypes = [
-  "ByteString",
-  "DOMString",
-  "USVString"
-];
+export const stringTypes = ["ByteString", "DOMString", "USVString"];
 
 export const argumentNameKeywords = [
   "async",
@@ -61,7 +60,7 @@ export const argumentNameKeywords = [
   "static",
   "stringifier",
   "typedef",
-  "unrestricted"
+  "unrestricted",
 ];
 
 const nonRegexTerminals = [
@@ -69,7 +68,9 @@ const nonRegexTerminals = [
   "FrozenArray",
   "Infinity",
   "NaN",
+  "ObservableArray",
   "Promise",
+  "bigint",
   "boolean",
   "byte",
   "double",
@@ -86,8 +87,9 @@ const nonRegexTerminals = [
   "sequence",
   "short",
   "true",
+  "undefined",
   "unsigned",
-  "void"
+  "void",
 ].concat(argumentNameKeywords, stringTypes, typeNameKeywords);
 
 const punctuations = [
@@ -101,10 +103,11 @@ const punctuations = [
   "=",
   ">",
   "?",
+  "*",
   "[",
   "]",
   "{",
-  "}"
+  "}",
 ];
 
 const reserved = [
@@ -130,7 +133,7 @@ function tokenise(str) {
 
     if (/[\t\n\r ]/.test(nextChar)) {
       result = attemptTokenMatch("whitespace", { noFlushTrivia: true });
-    } else if (nextChar === '/') {
+    } else if (nextChar === "/") {
       result = attemptTokenMatch("comment", { noFlushTrivia: true });
     }
 
@@ -150,10 +153,14 @@ function tokenise(str) {
         const token = tokens[lastIndex];
         if (result !== -1) {
           if (reserved.includes(token.value)) {
-            const message = `${unescape(token.value)} is a reserved identifier and must not be used.`;
-            throw new WebIDLParseError(syntaxError(tokens, lastIndex, null, message));
+            const message = `${unescape(
+              token.value
+            )} is a reserved identifier and must not be used.`;
+            throw new WebIDLParseError(
+              syntaxError(tokens, lastIndex, null, message)
+            );
           } else if (nonRegexTerminals.includes(token.value)) {
-            token.type = token.value;
+            token.type = "inline";
           }
         }
       }
@@ -163,7 +170,13 @@ function tokenise(str) {
 
     for (const punctuation of punctuations) {
       if (str.startsWith(punctuation, lastCharIndex)) {
-        tokens.push({ type: punctuation, value: punctuation, trivia, line, index });
+        tokens.push({
+          type: "inline",
+          value: punctuation,
+          trivia,
+          line,
+          index,
+        });
         trivia = "";
         lastCharIndex += punctuation.length;
         result = lastCharIndex;
@@ -186,7 +199,9 @@ function tokenise(str) {
   tokens.push({
     type: "eof",
     value: "",
-    trivia
+    trivia,
+    line,
+    index,
   });
 
   return tokens;
@@ -225,26 +240,66 @@ export class Tokeniser {
    * @return {never}
    */
   error(message) {
-    throw new WebIDLParseError(syntaxError(this.source, this.position, this.current, message));
+    throw new WebIDLParseError(
+      syntaxError(this.source, this.position, this.current, message)
+    );
   }
 
   /**
    * @param {string} type
    */
-  probe(type) {
-    return this.source.length > this.position && this.source[this.position].type === type;
+  probeKind(type) {
+    return (
+      this.source.length > this.position &&
+      this.source[this.position].type === type
+    );
   }
 
   /**
-   * @param  {...string} candidates
+   * @param {string} value
    */
-  consume(...candidates) {
+  probe(value) {
+    return (
+      this.probeKind("inline") && this.source[this.position].value === value
+    );
+  }
+
+  /**
+   * @param {...string} candidates
+   */
+  consumeKind(...candidates) {
     for (const type of candidates) {
-      if (!this.probe(type)) continue;
+      if (!this.probeKind(type)) continue;
       const token = this.source[this.position];
       this.position++;
       return token;
     }
+  }
+
+  /**
+   * @param {...string} candidates
+   */
+  consume(...candidates) {
+    if (!this.probeKind("inline")) return;
+    const token = this.source[this.position];
+    for (const value of candidates) {
+      if (token.value !== value) continue;
+      this.position++;
+      return token;
+    }
+  }
+
+  /**
+   * @param {string} value
+   */
+  consumeIdentifier(value) {
+    if (!this.probeKind("identifier")) {
+      return;
+    }
+    if (this.source[this.position].value !== value) {
+      return;
+    }
+    return this.consumeKind("identifier");
   }
 
   /**
@@ -266,7 +321,15 @@ export class WebIDLParseError extends Error {
    * @param {string} options.input
    * @param {*[]} options.tokens
    */
-  constructor({ message, bareMessage, context, line, sourceName, input, tokens }) {
+  constructor({
+    message,
+    bareMessage,
+    context,
+    line,
+    sourceName,
+    input,
+    tokens,
+  }) {
     super(message);
 
     this.name = "WebIDLParseError"; // not to be mangled

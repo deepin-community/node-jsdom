@@ -1,3 +1,130 @@
+node-jsdom (20.0.3+~cs124.18.21-1) unstable; urgency=medium
+
+  * Team upload
+  * Drop time-based test (w3c-hr-time)
+  * New upstream version 20.0.3+~cs124.18.21
+
+ -- Yadd <yadd@debian.org>  Tue, 22 Nov 2022 15:04:18 +0100
+
+node-jsdom (20.0.1+~cs123.18.20-1) unstable; urgency=medium
+
+  * Team upload
+  * Replace /releases by /tags in GitHub urls
+  * New upstream version 20.0.1+~cs123.18.20
+
+ -- Yadd <yadd@debian.org>  Sat, 29 Oct 2022 11:49:54 +0200
+
+node-jsdom (20.0.0+repack1+~cs121.19.20-3) unstable; urgency=medium
+
+  * Team upload
+  * Add fix for typescript 4.8
+
+ -- Yadd <yadd@debian.org>  Tue, 18 Oct 2022 16:23:06 +0200
+
+node-jsdom (20.0.0+repack1+~cs121.19.20-2) unstable; urgency=medium
+
+  * Team upload
+  * Update @types/jsdom test
+
+ -- Yadd <yadd@debian.org>  Mon, 05 Sep 2022 16:49:11 +0200
+
+node-jsdom (20.0.0+repack1+~cs121.19.20-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 20.0.0+~cs121.19.20
+  * Drop patch fix-jsdom-typescript-declarations: @types/jsdom updated
+
+ -- Yadd <yadd@debian.org>  Mon, 05 Sep 2022 12:16:56 +0200
+
+node-jsdom (20.0.0+repack1+~cs112.22.37-1) unstable; urgency=medium
+
+  * Team upload
+  * Drop component parse5, use dependency to new node-parse5 and repack
+
+ -- Yadd <yadd@debian.org>  Thu, 07 Jul 2022 09:56:10 +0200
+
+node-jsdom (20.0.0+~cs119.22.37-3) unstable; urgency=medium
+
+  * Team upload
+  * Fix @types/jsdom using current parse5 declarations, not old @types/parse5
+    files
+
+ -- Yadd <yadd@debian.org>  Sun, 03 Jul 2022 21:32:53 +0200
+
+node-jsdom (20.0.0+~cs119.22.37-2) unstable; urgency=medium
+
+  * Team upload
+  * Back to unstable
+
+ -- Yadd <yadd@debian.org>  Mon, 27 Jun 2022 09:16:09 +0200
+
+node-jsdom (20.0.0+~cs119.22.37-1) experimental; urgency=medium
+
+  * Team upload
+  * Drop @types/parse5* from components: built here now
+  * New upstream version 20.0.0+~cs119.22.37
+  * Update tr46 data
+  * Unfuzz patches
+  * Update lintian overrides
+  * Update build modules
+  * Build parse5 with tsc
+  * Add dependencies to: acorn, node-entities, node-escodegen, node-punycode
+
+ -- Yadd <yadd@debian.org>  Sun, 26 Jun 2022 08:11:26 +0200
+
+node-jsdom (19.0.0+~cs153.23.47-4) unstable; urgency=medium
+
+  * Team upload
+  * Declare compliance with policy 4.6.1
+  * Fix test (Closes: #1011794)
+
+ -- Yadd <yadd@debian.org>  Mon, 30 May 2022 07:35:30 +0200
+
+node-jsdom (19.0.0+~cs153.23.47-3) unstable; urgency=medium
+
+  * Team upload
+  * Breaks node-cheerio < 1.0.0~rc~10+repack~ (Closes: #1007117)
+
+ -- Yadd <yadd@debian.org>  Fri, 11 Mar 2022 20:17:32 +0100
+
+node-jsdom (19.0.0+~cs153.23.47-2) unstable; urgency=medium
+
+  * Team upload
+  * Enable part of upstream test (mocha)
+
+ -- Yadd <yadd@debian.org>  Thu, 10 Mar 2022 14:47:05 +0100
+
+node-jsdom (19.0.0+~cs153.23.47-1) unstable; urgency=medium
+
+  * Team upload
+  * Embed typescript declarations and repack
+  * Use dh-sequence-nodejs to read parse5/lerna.json and drop
+    debian/nodejs/additional_components
+  * Fix autopkgtest
+  * Update lintian overrides
+
+ -- Yadd <yadd@debian.org>  Thu, 10 Mar 2022 14:19:17 +0100
+
+node-jsdom (19.0.0+~cs90.11.27-1) unstable; urgency=medium
+
+  * Team upload
+  * Drop fix-ts.patch
+  * New upstream version 19.0.0+~cs90.11.27, updates
+    + jsdom 19.0.0
+    + @types/jsdom 16.2.14
+  * Update lintian overrides
+
+ -- Yadd <yadd@debian.org>  Tue, 28 Dec 2021 18:17:24 +0100
+
+node-jsdom (18.1.1+~cs90.11.25-1) unstable; urgency=medium
+
+  * Team upload
+  * Drop dependency to nodejs
+  * New upstream version 18.1.1+~cs90.11.25
+  * Update copyright
+
+ -- Yadd <yadd@debian.org>  Thu, 25 Nov 2021 14:56:54 +0100
+
 node-jsdom (18.1.0+~cs90.11.25-1) unstable; urgency=medium
 
   * Team upload

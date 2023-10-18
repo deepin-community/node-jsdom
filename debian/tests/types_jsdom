@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cd types-jsdom
+pkgjs-install-minimal
+pkgjs-ln parse5 2>&1 || true
+tsc --noEmit index.d.ts

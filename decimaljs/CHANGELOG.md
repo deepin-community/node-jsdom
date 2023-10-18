@@ -1,3 +1,17 @@
+#### 10.4.2
+* 12/10/2022
+* #209 Correct return type.
+
+#### 10.4.1
+* 16/09/2022
+* #205 Add './decimal' subpath to *package.json* `exports`.
+
+#### 10.4.0
+* 14/08/2022
+* #201 Add `exports` field to *package.json*.
+* #203 Preserve license comment after bundling.
+* #198 Use type predicate on `isDecimal`.
+
 #### 10.3.1
 * 25/06/2021
 * Remove minified versions. Refresh *README*.

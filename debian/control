@@ -5,7 +5,7 @@ Section: javascript
 Testsuite: autopkgtest-pkg-nodejs
 Priority: optional
 Build-Depends: debhelper-compat (= 13)
- , dh-sequence-nodejs
+ , dh-sequence-nodejs (>= 0.14.30~)
  , chai <!nocheck>
  , jest <!nocheck>
  , mocha <!nocheck>
@@ -13,11 +13,14 @@ Build-Depends: debhelper-compat (= 13)
  , node-babel7
  , node-cssom
  , node-cssstyle
+ , node-domhandler
+ , node-entities
  , node-form-data <!nocheck>
  , node-got
  , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~) <!nocheck>
  , node-iconv-lite <!nocheck>
  , node-lodash-packages
+ , node-parse5
  , node-recast
  , node-regenerate
  , node-rimraf
@@ -28,8 +31,10 @@ Build-Depends: debhelper-compat (= 13)
  , node-unicode-lastest
  , node-webidl-conversions
  , node-ws
+ , node-xtend <!nocheck>
+ , node-types-jest
  , ts-node <!nocheck>
-Standards-Version: 4.6.0
+Standards-Version: 4.6.1
 Vcs-Browser: https://salsa.debian.org/js-team/node-jsdom
 Vcs-Git: https://salsa.debian.org/js-team/node-jsdom.git
 Homepage: https://github.com/tmpvar/jsdom
@@ -39,19 +44,24 @@ Package: node-jsdom
 Architecture: all
 Depends: ${misc:Depends}
  , node-abab
+ , node-acorn
  , node-cssom
  , node-cssstyle
+ , node-entities
+ , node-escodegen
  , node-form-data
  , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~)
  , node-iconv-lite
  , node-lodash-packages
- , node-stealthy-require
+ , node-parse5
+ , node-punycode
  , node-tough-cookie
  , node-webidl-conversions
  , node-ws
- , nodejs
 Provides: ${nodejs:Provides}
+Recommends: node-domhandler
 Breaks: node-typescript-types (<< 20201122~)
+ , node-cheerio (<< 1.0.0~rc~10+repack~)
 Description: javascript implementation of the W3C DOM
  node-jsdom is a CommonJS implementation of the DOM, intended to be platform
  independent and as minimal/light as possible, while completely adhering to

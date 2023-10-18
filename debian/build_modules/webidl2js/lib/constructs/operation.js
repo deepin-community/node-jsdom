@@ -15,14 +15,61 @@ class Operation {
     this.static = idl.special === "static";
   }
 
-  isOnInstance() {
-    const firstOverloadOnInstance = utils.isOnInstance(this.idls[0], this.interface.idl);
-    for (const overload of this.idls.slice(1)) {
-      if (utils.isOnInstance(overload, this.interface.idl) !== firstOverloadOnInstance) {
-        throw new Error(`[Unforgeable] is not applied uniformly to operation "${this.name}" on ${this.interface.name}`);
+  getWhence() {
+    const { idls } = this;
+    const firstOverloadOnInstance = utils.isOnInstance(idls[0], this.interface.idl);
+    const hasLegacyUnforgeable = Boolean(utils.getExtAttr(idls[0].extAttrs, "LegacyUnforgeable"));
+
+    for (let i = 1; i < idls.length; i++) {
+      if (Boolean(utils.getExtAttr(idls[i].extAttrs, "LegacyUnforgeable")) !== hasLegacyUnforgeable) {
+        throw new Error(
+          `[LegacyUnforgeable] is not applied uniformly to operation "${this.name}" on ${this.interface.name}`
+        );
       }
     }
-    return firstOverloadOnInstance;
+
+    if (hasLegacyUnforgeable) {
+      return "unforgeables";
+    }
+
+    return firstOverloadOnInstance ? "instance" : "prototype";
+  }
+
+  isAsync() {
+    // As of the time of this writing, the current spec does not disallow such overloads, but the intention is to do so:
+    // https://github.com/heycam/webidl/pull/776
+    const firstAsync = this.idls[0].idlType.generic === "Promise";
+    for (const overload of this.idls.slice(1)) {
+      const isAsync = overload.idlType.generic === "Promise";
+      if (isAsync !== firstAsync) {
+        throw new Error(
+          `Overloading between Promise and non-Promise return types is not allowed: operation ` +
+          `"${this.name}" on ${this.interface.name}`
+        );
+      }
+    }
+    return firstAsync;
+  }
+
+  hasCallWithGlobal() {
+    const { idls } = this;
+    const hasCallWithGlobal = Boolean(utils.getExtAttr(idls[0].extAttrs, "WebIDL2JSCallWithGlobal"));
+
+    if (hasCallWithGlobal && !this.static) {
+      throw new Error(
+        `[WebIDL2JSCallWithGlobal] is only valid for static operations: "${this.name}" on ${this.interface.name}`
+      );
+    }
+
+    for (let i = 1; i < idls.length; i++) {
+      if (hasCallWithGlobal !== Boolean(utils.getExtAttr(idls[i].extAttrs, "WebIDL2JSCallWithGlobal"))) {
+        throw new Error(
+          `[WebIDL2JSCallWithGlobal] is not applied uniformly to operation "${this.name}" on ${this.interface.name}`
+        );
+      }
+    }
+
+    return hasCallWithGlobal;
   }
 
   fixUpArgsExtAttrs() {
@@ -47,7 +94,11 @@ class Operation {
       throw new Error(`Internal error: this operation does not have a name (in interface ${this.interface.name})`);
     }
 
-    const onInstance = this.isOnInstance();
+    const whence = this.getWhence();
+    const async = this.isAsync();
+    const promiseHandlingBefore = async ? `try {` : ``;
+    const promiseHandlingAfter = async ? `} catch (e) { return globalObject.Promise.reject(e); }` : ``;
+    const hasCallWithGlobal = this.hasCallWithGlobal();
 
     const type = this.static ? "static operation" : "regular operation";
     const overloads = Overloads.getEffectiveOverloads(type, this.name, 0, this.interface);
@@ -64,7 +115,7 @@ class Operation {
       str += `
         const esValue = this !== null && this !== undefined ? this : globalObject;
         if (!exports.is(esValue)) {
-          throw new TypeError("Illegal invocation");
+          throw new globalObject.TypeError("'${this.name}' called on an object that is not a valid instance of ${this.interface.name}.");
         }
       `;
     }
@@ -75,19 +126,32 @@ class Operation {
     const implFunc = this.idls[0].name || this.name;
 
     const parameterConversions = Parameters.generateOverloadConversions(
-      this.ctx, type, this.name, this.interface, `Failed to execute '${this.name}' on '${this.interface.name}': `);
-    const argsSpread = parameterConversions.hasArgs ? "...args" : "";
+      this.ctx,
+      type,
+      this.name,
+      this.interface,
+      `Failed to execute '${this.name}' on '${this.interface.name}': `
+    );
+    const args = [];
     requires.merge(parameterConversions.requires);
     str += parameterConversions.body;
+
+    if (hasCallWithGlobal) {
+      args.push("globalObject");
+    }
+
+    if (parameterConversions.hasArgs) {
+      args.push("...args");
+    }
 
     let invocation;
     if (overloads.every(overload => conversions[overload.operation.idlType.idlType])) {
       invocation = `
-        return ${callOn}.${implFunc}(${argsSpread});
+        return ${callOn}.${implFunc}(${utils.formatArgs(args)});
       `;
     } else {
       invocation = `
-        return utils.tryWrapperForImpl(${callOn}.${implFunc}(${argsSpread}));
+        return utils.tryWrapperForImpl(${callOn}.${implFunc}(${utils.formatArgs(args)}));
       `;
     }
 
@@ -98,12 +162,14 @@ class Operation {
     }
     str += invocation;
 
+    str = promiseHandlingBefore + str + promiseHandlingAfter;
+
     if (this.static) {
       this.interface.addStaticMethod(this.name, argNames, str);
     } else {
-      const forgeable = !utils.getExtAttr(this.idls[0].extAttrs, "Unforgeable");
+      const forgeable = whence !== "unforgeables";
       this.interface.addMethod(
-        onInstance ? "instance" : "prototype",
+        whence,
         this.name,
         argNames,
         str,

@@ -1,0 +1,2 @@
+Tests: types_jsdom
+Depends: @, dh-nodejs, node-typescript, node-tough-cookie

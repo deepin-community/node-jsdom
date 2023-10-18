@@ -7,14 +7,20 @@ const utils = require("./utils");
 
 function isOrIncludes(ctx, parent, predicate) {
   parent = Types.resolveType(ctx, parent);
-  return predicate(parent) || parent.union && parent.idlType.some(predicate);
+  return predicate(parent) || (parent.union && parent.idlType.some(predicate));
 }
 
 function generateVarConversion(ctx, overload, i, parent, errPrefix, targetIdx = i) {
   const requires = new utils.RequiresMap(ctx);
   const idlType = overload.typeList[i];
   // Always (try to) force-convert dictionaries
-  const optional = overload.optionalityList[i] === "optional" && !ctx.dictionaries.has(idlType.idlType);
+  const isDefaultedDictionary = overload.operation.arguments[i].default &&
+                                overload.operation.arguments[i].default.type === "dictionary";
+  if (isDefaultedDictionary && !ctx.dictionaries.has(idlType.idlType)) {
+    throw new Error(`The parameter ${overload.operation.arguments[i].name} was defaulted to {}, but no dictionary ` +
+      `named ${idlType.idlType} exists`);
+  }
+  const optional = overload.optionalityList[i] === "optional" && !isDefaultedDictionary;
   let str = `{ let curArg = arguments[${targetIdx}];`;
   if (optional) {
     str += `
@@ -22,9 +28,9 @@ function generateVarConversion(ctx, overload, i, parent, errPrefix, targetIdx = 
     `;
   }
   const msg = typeof targetIdx === "string" ?
-    `"${errPrefix}parameter " + (${targetIdx} + 1)` : `"${errPrefix}parameter ${i + 1}"`;
-  const conv = Types.generateTypeConversion(
-    ctx, "curArg", idlType, [], parent.name, msg);
+    `"${errPrefix}parameter " + (${targetIdx} + 1)` :
+`"${errPrefix}parameter ${i + 1}"`;
+  const conv = Types.generateTypeConversion(ctx, "curArg", idlType, [], parent.name, msg);
   requires.merge(conv.requires);
   str += conv.body;
   if (optional) {
@@ -46,6 +52,55 @@ function generateVarConversion(ctx, overload, i, parent, errPrefix, targetIdx = 
   };
 }
 
+module.exports.generateAsyncIteratorArgConversions = (ctx, idl, parent, errPrefix) => {
+  const requires = new utils.RequiresMap(ctx);
+  let str = "const args = [];";
+
+  for (let i = 0; i < idl.arguments.length; ++i) {
+    const idlArg = idl.arguments[i];
+    if (!idlArg.optional) {
+      throw new Error("All async iterable arguments must be optional");
+    }
+
+    const isDefaultedDictionary = idlArg.default && idlArg.default.type === "dictionary";
+    if (isDefaultedDictionary && !ctx.dictionaries.has(idlArg.idlType.idlType)) {
+      throw new Error(`The dictionary ${idlArg.idlType.idlType} was referenced in an argument list, but doesn't exist`);
+    }
+
+    const msg = `"${errPrefix}parameter ${i + 1}"`;
+    const conv = Types.generateTypeConversion(ctx, `args[${i}]`, idlArg.idlType, [], parent.name, msg);
+    requires.merge(conv.requires);
+
+    if (isDefaultedDictionary) {
+      str += `args[${i}] = arguments[${i}];${conv.body}`;
+    } else {
+      str += `
+        if (arguments[${i}] !== undefined) {
+          args[${i}] = arguments[${i}];${conv.body}
+        }
+      `;
+      if (idlArg.default) {
+        str += `
+          else {
+            args[${i}] = ${utils.getDefault(idlArg.default)};
+          }
+        `;
+      } else {
+        str += `
+          else {
+            args[${i}] = undefined;
+          }
+        `;
+      }
+    }
+  }
+
+  return {
+    requires,
+    body: str
+  };
+};
+
 module.exports.generateOverloadConversions = function (ctx, typeOfOp, name, parent, errPrefix) {
   const requires = new utils.RequiresMap(ctx);
   const ops = Overloads.getOperations(typeOfOp, name, parent);
@@ -58,8 +113,7 @@ module.exports.generateOverloadConversions = function (ctx, typeOfOp, name, pare
       const plural = minArgs > 1 ? "s" : "";
       str += `
         if (arguments.length < ${minArgs}) {
-          throw new TypeError("${errPrefix}${minArgs} argument${plural} required, but only " + arguments.length +
-                              " present.");
+          throw new globalObject.TypeError(\`${errPrefix}${minArgs} argument${plural} required, but only \${arguments.length} present.\`);
         }
       `;
     }
@@ -72,7 +126,7 @@ module.exports.generateOverloadConversions = function (ctx, typeOfOp, name, pare
         .filter(o => o.typeList.length === numArgs);
       if (S.length === 0) {
         switchCases.push(`
-          throw new TypeError("${errPrefix}only " + arguments.length + " arguments present.");
+          throw new globalObject.TypeError(\`${errPrefix}only \${arguments.length} arguments present.\`);
         `);
         continue;
       }
@@ -248,7 +302,7 @@ module.exports.generateOverloadConversions = function (ctx, typeOfOp, name, pare
         } else if (any.length) {
           possibilities.push(`{ ${continued(any[0], i)} }`);
         } else {
-          possibilities.push(`throw new TypeError("${errPrefix}No such overload");`);
+          possibilities.push(`throw new globalObject.TypeError("${errPrefix}No such overload");`);
         }
 
         caseSrc += possibilities.join(" else ");
@@ -282,13 +336,13 @@ module.exports.generateOverloadConversions = function (ctx, typeOfOp, name, pare
       let lastBody;
       for (let i = 0; i < switchCases.length - 1; i++) {
         if (lastBody !== undefined && switchCases[i] !== lastBody) {
-          str += lastBody + "break;";
+          str += `${lastBody}break;`;
         }
         str += `case ${minArgs + i}:`;
         lastBody = switchCases[i];
       }
       if (lastBody !== undefined && switchCases[switchCases.length - 1] !== lastBody) {
-        str += lastBody + "break;";
+        str += `${lastBody}break;`;
       }
       str += "default:";
       str += switchCases[switchCases.length - 1];

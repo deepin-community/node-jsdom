@@ -16,3 +16,4 @@ override_dh_auto_build:
 	node ./scripts/generate-js-globals.js
 	cp debian/missing/* lib/jsdom/living/generated/
 	ln -s lib/jsdom/living/generated .
+	ln -s ../scripts/eslint-plugin node_modules || true

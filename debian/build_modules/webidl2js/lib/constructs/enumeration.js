@@ -18,10 +18,10 @@ class Enumeration {
       const enumerationValues = new Set(${JSON.stringify([...values])});
       exports.enumerationValues = enumerationValues;
 
-      exports.convert = function convert(value, { context = "The provided value" } = {}) {
+      exports.convert = (globalObject, value, { context = "The provided value" } = {}) => {
         const string = \`\${value}\`;
-        if (!enumerationValues.has(value)) {
-          throw new TypeError(\`\${context} '\${value}' is not a valid enumeration value for ${this.name}\`);
+        if (!enumerationValues.has(string)) {
+          throw new globalObject.TypeError(\`\${context} '\${string}' is not a valid enumeration value for ${this.name}\`);
         }
         return string;
       };

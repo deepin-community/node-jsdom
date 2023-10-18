@@ -26,6 +26,41 @@ Other guidelines:
 * Roughly order changes within those groupings by impact.
 -->
 
+## 20.0.3
+
+* Updated dependencies, notably `w3c-xmlserializer`, which fixes using `DOMParser` on XML documents containing emoji.
+
+## 20.0.2
+
+* Fixed `xhr.abort()` to no longer give an exception when the constructed `XMLHttpRequest` was invalid. (whamtet)
+* Fixed `event.getModifierState()` on `MouseEvent` and `KeyboardEvent` instances to properly consult the `ctrlKey`, `altKey`, `metaKey`, and `shiftKey` properties of the event. (juzerzarif)
+* Fixed custom element creation to not be affected by any modifications to the `window.customElements` property. (bicknellr)
+
+## 20.0.1
+
+* Improved the performance of appending `<option>` elements to `<select>` elements. (TheHound)
+* Fixed `location.pathname` getter to not crash when the `JSDOM` instance was created using an opaque-path URL, including the default URL of `about:blank`.
+* Fixed `crypto.getRandomValues()` to accept typed array subclasses. (sebamarynissen)
+* Updated various dependency minor versions. Notably, `nwsapi` fixed some selectors bugs, and `tough-cookie` fixed some cookie bugs.
+
+## 20.0.0
+
+* Node.js v14 is now the minimum supported version
+* Added `crypto.getRandomValues()`. (sjrd)
+* Added `HTMLFormControlsCollection` and `RadioNodeList`, so `formEl.elements` now behaves correctly. (UndefinedBehavior)
+* Added the `signal` option to `addEventListener()`. (cheap-glitch)
+* Fixed the `:root` pseudoclass to work correctly. (hughs-ch)
+* Updated `parse5`, bringing along some HTML parsing and serialization fixes. (fb55)
+
+## 19.0.0
+
+* Changed `jsdom.nodeLocation()` to return `undefined` when used on nodes that originate via fragment parsing (e.g., via `innerHTML`). Previously it would return based on the node location of the fragment string, which made node locations unreliable with respect to the original document source. This restores the behavior that was present in v14.0.0, and was accidentally broken in v14.1.0. (bakkot)
+* Fixed calling `window.close()` inside the `Window`'s `load` event to no longer crash. (MattiasBuelens)
+
+## 18.1.1
+
+* Fixed `connectedCallback` to fire in situations involving document fragments, which was broken in v18.0.1. (GrantGryczan)
+
 ## 18.1.0
 
 * Fixed `headers.append()` and `headers.set()` to normalize values. (MattiasBuelens)

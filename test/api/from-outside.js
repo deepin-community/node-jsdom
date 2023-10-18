@@ -3,7 +3,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { assert } = require("chai");
 const { describe, it } = require("mocha-sugar-free");
-const { JSDOM } = require("../..");
+const { JSDOM, VirtualConsole } = require("../..");
 const { delay } = require("../util");
 
 describe("Test cases only possible to test from the outside", () => {
@@ -47,9 +47,26 @@ describe("Test cases only possible to test from the outside", () => {
     const { status, stdout } = spawnSync("node", ["--expose-gc", timeoutWithGcFixturePath], { encoding: "utf-8" });
 
     assert.equal(status, 0);
-    const diffInBytes = Number(stdout);
-    assert.isNotNaN(diffInBytes);
-    const diffInMB = diffInBytes / 1024 / 1024;
-    assert.isBelow(diffInMB, 5);
+    const ratio = Number(stdout);
+    assert.isNotNaN(ratio);
+
+    // At least 70% of the memory must be freed up.
+    assert.isBelow(ratio, 0.3);
+  });
+
+  it("window.close() should work from within a load event listener", async () => {
+    const errors = [];
+    const virtualConsole = new VirtualConsole().sendTo(console);
+    virtualConsole.on("jsdomError", e => {
+      errors.push(e);
+    });
+
+    const { window } = new JSDOM(``, { virtualConsole });
+    window.addEventListener("load", () => {
+      window.close();
+    });
+    await delay(0);
+
+    assert.isEmpty(errors);
   });
 });

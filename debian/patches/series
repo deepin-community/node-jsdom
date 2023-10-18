@@ -1,1 +1,3 @@
 fix-npmignore.patch
+fix-test.patch
+tsc-workaround.patch

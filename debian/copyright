@@ -8,7 +8,6 @@ Source: https://github.com/tmpvar/jsdom/releases
  https://github.com/jsdom/html-encoding-sniffer/tags
  https://github.com/mathiasbynens/is-potential-custom-element-name/tags
  https://registry.npmjs.org/nwsapi
- https://github.com/inikulin/parse5/tags
  https://github.com/lddubeau/saxes/tags
  https://github.com/jsdom/js-symbol-tree/tags
  https://github.com/jsdom/tr46/tags
@@ -19,8 +18,18 @@ Source: https://github.com/tmpvar/jsdom/releases
  https://github.com/jsdom/whatwg-url/tags
  https://github.com/lddubeau/xmlchars/tags
  https://github.com/jsdom/xml-name-validator/tags
- https://registry.npmjs.org/@types/parse5
  https://registry.npmjs.org/@types/jsdom
+ https://registry.npmjs.org/@types/data-urls
+ https://registry.npmjs.org/@types/decimal.js
+ https://registry.npmjs.org/@types/domexception
+ https://registry.npmjs.org/@types/html-encoding-sniffer
+ https://registry.npmjs.org/@types/nwsapi
+ https://registry.npmjs.org/@types/symbol-tree
+ https://registry.npmjs.org/@types/w3c-hr-time
+ https://registry.npmjs.org/@types/w3c-xmlserializer
+ https://registry.npmjs.org/@types/whatwg-encoding
+ https://registry.npmjs.org/@types/whatwg-mimetype
+ https://registry.npmjs.org/@types/whatwg-url
 
 Files: *
 Copyright: 2010, Elijah Insua <tmpvar@gmail.com>
@@ -35,16 +44,12 @@ Files: data-urls/*
  html-encoding-sniffer/*
  whatwg-encoding/*
  whatwg-mimetype/*
-Copyright: 2016-2020, Domenic Denicola <d@domenic.me>
+Copyright: Domenic Denicola <d@domenic.me>
 License: Expat
 
 Files: debian/*
 Copyright: 2011-2012, David Paleino <dapal@debian.org>
- 2020, Yadd <yadd@debian.org>
-License: Expat
-
-Files: debian/build_modules/waka/*
-Copyright: 2014, Gustavs Tebergs
+ 2020-2021, Yadd <yadd@debian.org>
 License: Expat
 
 Files: debian/build_modules/webidl2/*
@@ -56,8 +61,16 @@ Copyright: 2015-2019, Sebastian Mayr <npm@smayr.name>
  2016–2019, Tiancheng "Timothy" Gu <timothygu99@gmail.com>
 License: Expat
 
+Files: debian/tests/test_modules/mocha-sugar-free/*
+Copyright: 2015 Joris van der Wel
+License: Expat
+
+Files: debian/tests/test_modules/server-destroy/*
+Copyright: Isaac Z. Schlueter and Contributors
+License: ISC
+
 Files: decimaljs/*
-Copyright: 2019, Michael Mclaughlin
+Copyright: 2021, Michael Mclaughlin
 License: Expat
 
 Files: is-potential-custom-element-name/*
@@ -71,10 +84,6 @@ License: GPL-2+
 
 Files: nwsapi/*
 Copyright: 2007-2019, Diego Perini <http://www.iport.it/>
-License: Expat
-
-Files: parse5/*
-Copyright: 2013-2019, Ivan Nikulin <ifaaan@gmail.com>
 License: Expat
 
 Files: saxes/*
