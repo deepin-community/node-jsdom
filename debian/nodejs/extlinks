@@ -3,7 +3,7 @@ domhandler
 entities
 parse5
 @types/chai	test
-@types/jest
+@types/jest	test
 @types/node
 @types/tough-cookie
 ws	test

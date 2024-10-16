@@ -1,0 +1,18 @@
+Description: fir for node-https-proxy-agent >= 7
+Author: Yadd <yadd@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-11-23
+
+--- a/lib/jsdom/living/helpers/agent-factory.js
++++ b/lib/jsdom/living/helpers/agent-factory.js
+@@ -2,8 +2,8 @@
+ const http = require("http");
+ const https = require("https");
+ const { parse: parseURLToNodeOptions } = require("url");
+-const HttpProxyAgent = require("http-proxy-agent");
+-const HttpsProxyAgent = require("https-proxy-agent");
++const {HttpProxyAgent} = require("http-proxy-agent");
++const {HttpsProxyAgent} = require("https-proxy-agent");
+ 
+ module.exports = function agentFactory(proxy, rejectUnauthorized) {
+   const agentOpts = { keepAlive: true, rejectUnauthorized };
