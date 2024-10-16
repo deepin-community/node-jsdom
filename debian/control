@@ -17,7 +17,8 @@ Build-Depends: debhelper-compat (= 13)
  , node-entities
  , node-form-data <!nocheck>
  , node-got
- , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~) <!nocheck>
+ , node-http-proxy-agent (>= 7) <!nocheck>
+ , node-https-proxy-agent (>= 7) <!nocheck>
  , node-iconv-lite <!nocheck>
  , node-lodash-packages
  , node-parse5
@@ -32,9 +33,8 @@ Build-Depends: debhelper-compat (= 13)
  , node-webidl-conversions
  , node-ws
  , node-xtend <!nocheck>
- , node-types-jest
  , ts-node <!nocheck>
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 Vcs-Browser: https://salsa.debian.org/js-team/node-jsdom
 Vcs-Git: https://salsa.debian.org/js-team/node-jsdom.git
 Homepage: https://github.com/tmpvar/jsdom
@@ -50,7 +50,8 @@ Depends: ${misc:Depends}
  , node-entities
  , node-escodegen
  , node-form-data
- , node-https-proxy-agent (>= 5.0.0+~cs8.0.0-2~)
+ , node-http-proxy-agent (>= 7)
+ , node-https-proxy-agent (>= 7)
  , node-iconv-lite
  , node-lodash-packages
  , node-parse5

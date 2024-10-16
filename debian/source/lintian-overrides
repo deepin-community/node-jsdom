@@ -2,23 +2,23 @@
 add-component-copyright types-*
 
 # Unused files
-source-is-missing *test/jquery-fixtures/jquery-1.6.4.min.js*
-source-contains-prebuilt-javascript-object *test/jquery-fixtures/jquery-1.6.4.min.js*
+source-is-missing [*test/jquery-fixtures/jquery-1.6.4.min.js*]
+source-contains-prebuilt-javascript-object [*test/jquery-fixtures/jquery-1.6.4.min.js*]
 very-long-line-length-in-source-file *test/jquery-fixtures/jquery-1.6.4.min.js*
 
 # False positive
-source-is-missing *debian/tr46/regexes.js*
-source-is-missing *decimaljs/decimal.js*
-source-is-missing *decimaljs/test/*.js*
-source-is-missing *test/to-port-to-wpts/level2/core/files/staffNS.xml.js*
-source-is-missing *tr46/scripts/unicode/Joining_Type.js*
-source-is-missing *xml-name-validator/lib/xml-name-validator.js*
-source-contains-prebuilt-javascript-object *debian/tr46/regexes.js*
-source-contains-prebuilt-javascript-object *decimaljs/decimal.js*
-source-contains-prebuilt-javascript-object *decimaljs/test/*.js*
-source-contains-prebuilt-javascript-object *test/to-port-to-wpts/level2/core/files/staffNS.xml.js*
-source-contains-prebuilt-javascript-object *tr46/scripts/unicode/Joining_Type.js*
-source-contains-prebuilt-javascript-object *xml-name-validator/lib/xml-name-validator.js*
+source-is-missing [*debian/tr46/regexes.js*]
+source-is-missing [*decimaljs/decimal.js*]
+source-is-missing [*decimaljs/test/*.js*]
+source-is-missing [*test/to-port-to-wpts/level2/core/files/staffNS.xml.js*]
+source-is-missing [*tr46/scripts/unicode/Joining_Type.js*]
+source-is-missing [*xml-name-validator/lib/xml-name-validator.js*]
+source-contains-prebuilt-javascript-object [*debian/tr46/regexes.js*]
+source-contains-prebuilt-javascript-object [*decimaljs/decimal.js*]
+source-contains-prebuilt-javascript-object [*decimaljs/test/*.js*]
+source-contains-prebuilt-javascript-object [*test/to-port-to-wpts/level2/core/files/staffNS.xml.js*]
+source-contains-prebuilt-javascript-object [*tr46/scripts/unicode/Joining_Type.js*]
+source-contains-prebuilt-javascript-object [*xml-name-validator/lib/xml-name-validator.js*]
 very-long-line-length-in-source-file *.md*
 very-long-line-length-in-source-file *browser-process-hrtime/LICENSE*
 very-long-line-length-in-source-file *decimaljs/decimal.js*

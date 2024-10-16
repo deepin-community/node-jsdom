@@ -1,3 +1,29 @@
+node-jsdom (20.0.3+~cs124.18.21-4) unstable; urgency=medium
+
+  * Team upload
+  * Source-only upload
+
+ -- Yadd <yadd@debian.org>  Sat, 25 Nov 2023 07:15:10 +0400
+
+node-jsdom (20.0.3+~cs124.18.21-3) unstable; urgency=medium
+
+  * Team upload
+  * Tag @types/jest link with "test"
+  * Binary upload due to circular dependencies
+
+ -- Yadd <yadd@debian.org>  Fri, 24 Nov 2023 08:46:33 +0400
+
+node-jsdom (20.0.3+~cs124.18.21-2) unstable; urgency=medium
+
+  * Team upload
+  * Update lintian override info format in d/source/lintian-overrides
+    on line 5-6, 10-21
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository-Browse
+  * Update standards version to 4.6.2, no changes needed
+  * Add patch for node-https-proxy-agent >= 7
+
+ -- Yadd <yadd@debian.org>  Thu, 23 Nov 2023 11:12:21 +0400
+
 node-jsdom (20.0.3+~cs124.18.21-1) unstable; urgency=medium
 
   * Team upload
